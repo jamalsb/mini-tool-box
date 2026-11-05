@@ -281,34 +281,85 @@
     </div>
   </section>
 
-  <!-- ============================================================ -->
-  <!-- 3) QR CODE GENERATOR                                         -->
-  <!-- ============================================================ -->
-  <section class="tool" data-tool="qr" id="tool-qr" hidden>
-    <h2>QR Code Generator</h2>
-    <p class="lead">Create QR codes for links or text. Download as PNG.</p>
-    <label class="control">Text or URL
-      <input type="text" id="qrInput" placeholder="https://example.com" value="https://example.com">
-    </label>
-    <div class="row">
-      <label class="control" style="max-width:180px">Size (px)
-        <select id="qrSize">
-          <option>200</option>
-          <option selected>300</option>
-          <option>500</option>
-          <option>800</option>
-        </select>
-      </label>
-      <div class="actions">
-        <button class="btn primary" id="qrGen">Generate</button>
-        <button class="btn" id="qrDownload" disabled>Download PNG</button>
-      </div>
-    </div>
-    <p class="hint" id="qrHint"></p>
-    <div class="preview-box" style="margin-top:14px">
-      <canvas id="qrCanvas" width="300" height="300"></canvas>
-    </div>
-  </section>
+  /* ============================================================
+   Tool 3: QR Code Generator — Multi-CDN Fallback (FIXED)
+   ============================================================ */
+try {
+  (function () {
+    var input = $("qrInput"), sizeSel = $("qrSize"), canvas = $("qrCanvas");
+    var gen = $("qrGen"), dl = $("qrDownload"), hint = $("qrHint");
+    var libLoaded = false, libLoading = null, qrBlob = null;
+
+    // ایک سے زیادہ CDNs کی لسٹ تاکہ کوئی ایک فیل ہو تو دوسرا کام کرے
+    var CDN_URLS = [
+      "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js",
+      "https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js",
+      "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.js" // غیر منیفائیڈ fallback
+    ];
+
+    function tryLoadScript(url) {
+      return new Promise(function (resolve, reject) {
+        var s = document.createElement("script");
+        s.src = url;
+        var timer = setTimeout(function () { 
+          s.remove(); 
+          reject(new Error("timeout")); 
+        }, 8000); // 8 سیکنڈ کا ٹائم آؤٹ
+        s.onload = function () { clearTimeout(timer); resolve(); };
+        s.onerror = function () { clearTimeout(timer); s.remove(); reject(new Error("failed")); };
+        document.head.appendChild(s);
+      });
+    }
+
+    function loadLib() {
+      if (libLoaded) return Promise.resolve();
+      if (libLoading) return libLoading;
+
+      libLoading = (async function () {
+        for (var i = 0; i < CDN_URLS.length; i++) {
+          try {
+            await tryLoadScript(CDN_URLS[i]);
+            if (typeof QRCode !== "undefined") {
+              libLoaded = true;
+              return; // کامیاب!
+            }
+          } catch (err) {
+            console.warn("CDN failed: " + CDN_URLS[i], err);
+          }
+        }
+        throw new Error("All QR libraries failed to load.");
+      })();
+
+      return libLoading;
+    }
+
+    function generate() {
+      var text = input.value.trim() || "https://example.com";
+      var size = parseInt(sizeSel.value, 10) || 300;
+      setHint(hint, "Preparing…");
+      
+      loadLib().then(function () {
+        canvas.width = size; canvas.height = size;
+        QRCode.toCanvas(canvas, text, {
+          width: size, margin: 2,
+          color: { dark: "#111827", light: "#ffffff" }
+        }, function (err) {
+          if (err) { setHint(hint, "Could not generate the QR code.", true); return; }
+          canvas.toBlob(function (b) { if (b) { qrBlob = b; dl.disabled = false; } }, "image/png");
+          setHint(hint, "✓ QR Code ready!");
+        });
+      }).catch(function () {
+        setHint(hint, "❌ QR library load nahi ho saki. Internet check karein ya page refresh karein.", true);
+      });
+    }
+
+    gen.addEventListener("click", generate);
+    input.addEventListener("keydown", function (e) { if (e.key === "Enter") generate(); });
+    sizeSel.addEventListener("change", generate);
+    dl.addEventListener("click", function () { if (qrBlob) downloadBlob(qrBlob, "qrcode.png"); });
+  })();
+} catch (e) { console.error("QR tool failed:", e); }
 
   <!-- ============================================================ -->
   <!-- 4) PASSWORD GENERATOR                                        -->
