@@ -1,311 +1,516 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MiniToolBox - Free Online Tools</title>
-    
-    <!-- QR Code Library (Updated to a reliable source) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiniToolBox — 4 Free Online Tools</title>
+<meta name="description" content="Free online tools: Background Remover, Image Compressor, QR Code Generator and Password Generator.">
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --blue: #2563eb;
+    --blue-dark: #1d4ed8;
+    --bg: #f4f6fb;
+    --card: #fff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --muted: #6b7280;
+  }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+  }
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
+  header.top {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 12px 16px; position: sticky; top: 0; z-index: 20;
+  }
+  .top-inner {
+    max-width: 1000px; margin: 0 auto;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; }
+  .brand .logo {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: .85rem;
+  }
+  .brand .sub { font-weight: 400; color: var(--muted); font-size: .72rem; margin-left: 4px; }
 
-        body {
-            background-color: #f4f7f9;
-            color: #333;
-            padding-bottom: 50px;
-        }
+  .tabs { background: var(--card); border-bottom: 1px solid var(--border); position: sticky; top: 57px; z-index: 19; }
+  .tabs-inner {
+    max-width: 1000px; margin: 0 auto;
+    display: flex; gap: 4px; padding: 8px 12px; overflow-x: auto;
+  }
+  .tabs-inner button {
+    border: 0; background: transparent; font: inherit; font-size: .875rem;
+    padding: 8px 14px; border-radius: 9px; color: #374151;
+    cursor: pointer; white-space: nowrap; transition: .15s;
+    touch-action: manipulation;
+  }
+  .tabs-inner button:hover { background: #f3f4f6; }
+  .tabs-inner button.active { background: #eff6ff; color: var(--blue-dark); font-weight: 600; }
 
-        header {
-            background: white;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
+  #jsStatus {
+    text-align: center; font-size: .72rem; padding: 4px 0 6px;
+    background: var(--card); color: var(--muted); margin: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  #jsStatus.ok { color: #15803d; }
+  #jsStatus.err { color: #b91c1c; }
 
-        header h1 {
-            font-size: 1.5rem;
-            color: #111;
-        }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .tool {
+    background: var(--card); border-radius: 16px; padding: 22px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.06);
+    display: none;
+  }
+  .tool.active { display: block; }
+  .tool h2 { margin: 0 0 4px; font-size: 1.2rem; }
+  .tool .lead { margin: 0 0 18px; color: var(--muted); font-size: .85rem; }
 
-        header h1 span {
-            font-size: 0.8rem;
-            color: #888;
-            font-weight: normal;
-        }
+  .drop {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 34px 20px; border: 2px dashed #93c5fd; border-radius: 12px;
+    background: #f8faff; cursor: pointer; text-align: center; transition: .15s;
+  }
+  .drop:hover, .drop.drag { border-color: #3b82f6; background: #eff6ff; }
+  .drop svg { color: #60a5fa; }
+  .drop strong { font-size: 1rem; }
+  .drop span { color: var(--muted); font-size: .8rem; }
 
-        .tabs {
-            display: flex;
-            overflow-x: auto;
-            background: white;
-            padding: 10px;
-            gap: 10px;
-            scrollbar-width: none;
-        }
+  .hint {
+    margin: 10px 0 0; font-size: .8rem; color: var(--muted);
+    text-align: center; min-height: 1em;
+  }
+  .hint.error { color: #b91c1c; }
 
-        .tabs::-webkit-scrollbar {
-            display: none;
-        }
+  .preview-box {
+    margin-top: 16px; display: grid; place-items: center; padding: 8px;
+    border-radius: 12px; background-color: #fff;
+    background-image:
+      linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+      linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+      linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .preview-box img, .preview-box canvas {
+    display: block; max-width: 100%; max-height: 55vh; border-radius: 6px;
+  }
 
-        .tab-btn {
-            padding: 10px 20px;
-            border: none;
-            background: #f0f0f0;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            color: #555;
-            white-space: nowrap;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; margin-top: 18px; }
+  .control { display: block; font-size: .85rem; color: #374151; }
+  .control b { color: var(--blue-dark); font-variant-numeric: tabular-nums; }
+  .control input[type="range"] { width: 100%; margin-top: 6px; accent-color: var(--blue); }
+  .control input[type="number"], .control input[type="text"], .control select {
+    width: 100%; margin-top: 6px; padding: 8px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    font: inherit; font-size: .875rem; background: #fff; color: var(--text);
+  }
+  .control input:focus, .control select:focus { outline: 2px solid #bfdbfe; border-color: var(--blue); }
 
-        .tab-btn.active {
-            background: #e8f0fe;
-            color: #1a73e8;
-            font-weight: 600;
-        }
+  .row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .check { display: inline-flex; align-items: center; gap: 8px; font-size: .85rem; color: #374151; cursor: pointer; user-select: none; }
+  .check input { accent-color: var(--blue); }
 
-        .tool-section {
-            display: none;
-            padding: 20px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    font: inherit; font-size: .875rem; padding: 9px 16px;
+    border-radius: 9px; border: 1px solid #d1d5db;
+    background: #fff; color: var(--text); cursor: pointer; transition: .15s;
+  }
+  .btn:hover { background: #f3f4f6; }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+  .btn.primary:hover { background: var(--blue-dark); }
+  .btn.primary:disabled { opacity: .55; cursor: not-allowed; }
 
-        .tool-section.active {
-            display: block;
-        }
+  .stat { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; font-size: .85rem; }
+  .stat div { background: #f8faff; border-radius: 8px; padding: 8px 12px; }
+  .stat b { color: var(--blue-dark); }
 
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
+  .pwd-out {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; padding: 16px 18px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: 1.1rem; border: 0; background: transparent;
+    text-align: center; color: #111827; letter-spacing: .02em;
+    word-break: break-all;
+  }
+  #qrCanvas { background: #fff; border-radius: 6px; }
 
-        .card h2 {
-            font-size: 1.3rem;
-            margin-bottom: 8px;
-        }
+  footer.bot { text-align: center; color: var(--muted); font-size: .75rem; padding: 24px 16px 32px; }
 
-        .desc {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 20px;
-            line-height: 1.4;
-        }
-
-        .drop-zone {
-            border: 2px dashed #a0c4ff;
-            background: #f8fbff;
-            border-radius: 10px;
-            padding: 40px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .drop-zone:hover {
-            background: #eef5ff;
-        }
-
-        .drop-zone span {
-            font-size: 2rem;
-            color: #3b82f6;
-        }
-
-        .drop-zone h3 {
-            font-size: 1.1rem;
-            margin: 10px 0 5px;
-            color: #333;
-        }
-
-        .drop-zone p {
-            font-size: 0.85rem;
-            color: #888;
-        }
-
-        .download-btn {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            margin-top: 15px;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.3s;
-        }
-
-        .download-btn:hover {
-            background: #2563eb;
-        }
-
-        .download-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .file-input-simple {
-            width: 100%;
-            padding: 15px;
-            background: #f8fbff;
-            border: 2px dashed #a0c4ff;
-            border-radius: 8px;
-        }
-
-        .text-input {
-            width: 100%;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        .text-input:focus {
-            border-color: #3b82f6;
-        }
-
-        .result-area {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .result-area h4 {
-            margin-bottom: 10px;
-            color: #333;
-        }
-    </style>
+  @media (max-width: 640px) {
+    .controls { grid-template-columns: 1fr; }
+    .tool { padding: 16px; }
+  }
+</style>
 </head>
 <body>
 
-    <header>
-        <h1>MiniToolBox <span>free · offline · private</span></h1>
-    </header>
-
-    <div class="tabs">
-        <button class="tab-btn active" onclick="openTool('bg-remover', this)">Background Remover</button>
-        <button class="tab-btn" onclick="openTool('compressor', this)">Image Compressor</button>
-        <button class="tab-btn" onclick="openTool('qr-generator', this)">QR Code Generator</button>
-        <button class="tab-btn" onclick="openTool('video-logo', this)">Video Logo Remover</button>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <div class="logo">MT</div>
+      <div>MiniToolBox <span class="sub">free · offline · private</span></div>
     </div>
+  </div>
+</header>
 
-    <!-- Tool 1: Background Remover -->
-    <div id="bg-remover" class="tool-section active">
-        <div class="card">
-            <h2>Background Remover</h2>
-            <p class="desc">Remove an image's background — everything happens locally in your browser.</p>
-            <div class="drop-zone" id="bg-zone">
-                <span>⬆️</span>
-                <h3>Drop an image here</h3>
-                <p>or click to choose</p>
-                <input type="file" id="bg-input" accept="image/*" hidden>
-            </div>
-            <div id="bg-result" class="result-area" style="display:none;">
-                <h4>Background Removed (Preview):</h4>
-                <img id="bg-img" style="max-width: 100%; border-radius: 8px;">
-                <button class="download-btn" id="bg-download">Download Image</button>
-            </div>
+<div class="tabs">
+  <div class="tabs-inner" id="tabs">
+    <button type="button" onclick="showTool('bg')" class="active">Background Remover</button>
+    <button type="button" onclick="showTool('compress')">Image Compressor</button>
+    <button type="button" onclick="showTool('qr')">QR Code Generator</button>
+    <button type="button" onclick="showTool('password')">Password Generator</button>
+  </div>
+</div>
+
+<p id="jsStatus">Loading ToolBox…</p>
+
+<main>
+
+  <!-- 1) BACKGROUND REMOVER -->
+  <section class="tool active" data-tool="bg" id="tool-bg">
+    <h2>Background Remover</h2>
+    <p class="lead">Remove an image's background — everything happens locally in your browser.</p>
+    <label class="drop" id="bgDrop" for="bgInput">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <strong>Drop an image here</strong>
+      <span>or click to choose · you can also paste with Ctrl+V</span>
+      <input type="file" id="bgInput" accept="image/*" hidden>
+    </label>
+    <p class="hint" id="bgHint"></p>
+    <div id="bgEditor" hidden>
+      <div class="preview-box"><canvas id="bgCanvas"></canvas></div>
+      <div class="controls">
+        <label class="control">Background tolerance <b id="bgTolVal">25</b>
+          <input type="range" id="bgTol" min="1" max="100" value="25">
+        </label>
+        <label class="control">Edge softness <b id="bgSoftVal">1</b>
+          <input type="range" id="bgSoft" min="0" max="3" value="1">
+        </label>
+      </div>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="bgCompare"> Show original</label>
+        <div class="actions">
+          <button type="button" class="btn primary" id="bgDownload">Download PNG</button>
+          <button type="button" class="btn" id="bgReset">Choose another</button>
         </div>
+      </div>
     </div>
+  </section>
 
-    <!-- Tool 2: Image Compressor -->
-    <div id="compressor" class="tool-section">
-        <div class="card">
-            <h2>Image Compressor</h2>
-            <p class="desc">Reduce image file size without losing visible quality.</p>
-            <input type="file" id="comp-input" accept="image/*" class="file-input-simple">
-            <div id="comp-result" style="display:none; margin-top: 15px;">
-                <p>Original: <span id="comp-orig-size"></span></p>
-                <p>Compressed: <span id="comp-new-size" style="color: #3b82f6; font-weight: bold;"></span></p>
-                <button class="download-btn" id="comp-download">Download Compressed</button>
-            </div>
+  <!-- 2) IMAGE COMPRESSOR -->
+  <section class="tool" data-tool="compress" id="tool-compress">
+    <h2>Image Compressor</h2>
+    <p class="lead">Reduce file size while keeping quality.</p>
+    <label class="drop" id="compDrop" for="compInput">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <strong>Drop an image here</strong>
+      <span>or click to choose</span>
+      <input type="file" id="compInput" accept="image/*" hidden>
+    </label>
+    <p class="hint" id="compHint"></p>
+    <div id="compEditor" hidden>
+      <div class="preview-box"><img id="compPreview" alt=""></div>
+      <div class="controls">
+        <label class="control">Quality <b id="compQVal">75</b>
+          <input type="range" id="compQ" min="10" max="100" value="75">
+        </label>
+        <label class="control">Format
+          <select id="compFormat">
+            <option value="image/jpeg">JPEG</option>
+            <option value="image/webp">WebP</option>
+            <option value="image/png">PNG</option>
+          </select>
+        </label>
+      </div>
+      <div class="stat">
+        <div>Original: <b id="compOrig">—</b></div>
+        <div>Compressed: <b id="compNew">—</b></div>
+        <div id="compSavings"></div>
+      </div>
+      <div class="row">
+        <div class="actions">
+          <button type="button" class="btn primary" id="compDownload" disabled>Download</button>
+          <button type="button" class="btn" id="compReset">Choose another</button>
         </div>
+      </div>
     </div>
+  </section>
 
-    <!-- Tool 3: QR Code Generator -->
-    <div id="qr-generator" class="tool-section">
-        <div class="card">
-            <h2>QR Code Generator</h2>
-            <p class="desc">Create a QR code for any link or text.</p>
-            <input type="text" id="qr-input" placeholder="Enter link or text here..." class="text-input">
-            <div id="qr-preview" style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 15px;">
-                <div id="qr-code" style="background: white; padding: 10px; border-radius: 8px; min-height: 50px;"></div>
-                <button class="download-btn" id="qr-download" style="display: none;">Download QR</button>
-            </div>
-        </div>
+  <!-- 3) QR CODE GENERATOR -->
+  <section class="tool" data-tool="qr" id="tool-qr">
+    <h2>QR Code Generator</h2>
+    <p class="lead">Create QR codes for links or text. Download as PNG.</p>
+    <label class="control">Text or URL
+      <input type="text" id="qrInput" placeholder="https://example.com" value="https://example.com">
+    </label>
+    <div class="row">
+      <label class="control" style="max-width:180px">Size (px)
+        <select id="qrSize">
+          <option>200</option>
+          <option selected>300</option>
+          <option>500</option>
+          <option>800</option>
+        </select>
+      </label>
+      <div class="actions">
+        <button type="button" class="btn primary" id="qrGen">Generate</button>
+        <button type="button" class="btn" id="qrDownload" disabled>Download PNG</button>
+      </div>
     </div>
-
-    <!-- Tool 4: Video Logo Remover -->
-    <div id="video-logo" class="tool-section">
-        <div class="card">
-            <h2>AI Video Logo Remover</h2>
-            <p class="desc">Remove unwanted logos from your own videos. (Requires backend to process)</p>
-            
-            <div class="drop-zone" id="video-drop-zone">
-                <span>🎬</span>
-                <h3>Drop your video here</h3>
-                <p>MP4, MOV, WebM · Max 200 MB</p>
-                <input type="file" id="video-input" accept="video/mp4,video/webm" hidden>
-            </div>
-            
-            <div id="video-editor" style="display:none; margin-top: 20px;">
-                <p style="font-size: 14px; color: #a0a0a0; margin-bottom: 10px;">Pause video and select the area over the logo:</p>
-                <video id="preview-video" controls playsinline style="width: 100%; border-radius: 8px; background: #000;"></video>
-                
-                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="download-btn" id="process-video-btn" disabled>Remove Logo</button>
-                    <button class="download-btn" style="background: #333;" id="reset-video-btn">Start Over</button>
-                </div>
-                <p id="video-status" style="margin-top: 10px; color: #3b82f6; font-size: 14px;"></p>
-            </div>
-        </div>
+    <p class="hint" id="qrHint"></p>
+    <div class="preview-box" style="margin-top:14px">
+      <canvas id="qrCanvas" width="300" height="300"></canvas>
     </div>
+  </section>
 
-    <script>
-        // ==========================================
-        // 1. Tab Switching Logic
-        // ==========================================
-        function openTool(toolId, btnElement) {
-            document.querySelectorAll('.tool-section').forEach(sec => {
-                sec.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+  <!-- 4) PASSWORD GENERATOR -->
+  <section class="tool" data-tool="password" id="tool-password">
+    <h2>Password Generator</h2>
+    <p class="lead">Strong random passwords generated with your browser's crypto.</p>
+    <div class="preview-box" style="margin-top:4px">
+      <input type="text" id="pwdOut" class="pwd-out" readonly value="click generate">
+    </div>
+    <div class="controls">
+      <label class="control">Length <b id="pwdLenVal">16</b>
+        <input type="range" id="pwdLen" min="4" max="64" value="16">
+      </label>
+      <div class="control">
+        <div style="margin-bottom:6px">Include</div>
+        <label class="check"><input type="checkbox" id="pwdUpper" checked> Uppercase (A-Z)</label><br>
+        <label class="check"><input type="checkbox" id="pwdLower" checked> Lowercase (a-z)</label><br>
+        <label class="check"><input type="checkbox" id="pwdNum" checked> Numbers (0-9)</label><br>
+        <label class="check"><input type="checkbox" id="pwdSym" checked> Symbols (!@#$)</label>
+      </div>
+    </div>
+    <div class="row">
+      <div class="actions">
+        <button type="button" class="btn primary" id="pwdGen">Generate</button>
+        <button type="button" class="btn" id="pwdCopy">Copy</button>
+      </div>
+    </div>
+  </section>
 
-            document.getElementById(toolId).classList.add('active');
-            btnElement.classList.add('active');
+</main>
+
+<footer class="bot">
+  MiniToolBox · all tools run 100% in your browser — nothing is uploaded.
+</footer>
+
+<script>
+/* GLOBAL showTool */
+window.showTool = function (name) {
+  try {
+    var sections = document.querySelectorAll(".tool");
+    for (var i = 0; i < sections.length; i++) {
+      var s = sections[i];
+      if (s.getAttribute("data-tool") === name) {
+        s.classList.add("active");
+      } else {
+        s.classList.remove("active");
+      }
+    }
+    var btns = document.querySelectorAll("#tabs button");
+    for (var j = 0; j < btns.length; j++) {
+      var b = btns[j];
+      var onclickAttr = b.getAttribute("onclick") || "";
+      if (onclickAttr.indexOf("'" + name + "'") !== -1) {
+        b.classList.add("active");
+      } else {
+        b.classList.remove("active");
+      }
+    }
+    try { history.replaceState(null, "", "#" + name); } catch (e) {}
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    console.error("showTool error:", err);
+  }
+};
+
+/* Support URL hash */
+(function () {
+  var hash = (location.hash || "").replace("#", "");
+  var valid = ["bg", "compress", "qr", "password"];
+  if (valid.indexOf(hash) !== -1) window.showTool(hash);
+  window.addEventListener("hashchange", function () {
+    var h = (location.hash || "").replace("#", "");
+    if (valid.indexOf(h) !== -1) window.showTool(h);
+  });
+})();
+
+/* Shared helpers */
+var $ = function (id) { return document.getElementById(id); };
+var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
+var formatBytes = function (b) {
+  return b < 1024 ? b + " B" :
+         b < 1048576 ? (b / 1024).toFixed(1) + " KB" :
+         (b / 1048576).toFixed(2) + " MB";
+};
+var setHint = function (el, msg, err) {
+  el.textContent = msg || "";
+  el.classList.toggle("error", !!err);
+};
+var loadImage = function (file) {
+  return new Promise(function (resolve, reject) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("load")); };
+    img.src = url;
+  });
+};
+var downloadBlob = function (blob, name) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+};
+var bindDrop = function (dropEl, inputEl, handler) {
+  inputEl.addEventListener("change", function () {
+    var f = inputEl.files && inputEl.files[0];
+    if (f) handler(f);
+  });
+  ["dragenter", "dragover"].forEach(function (t) {
+    dropEl.addEventListener(t, function (e) { e.preventDefault(); dropEl.classList.add("drag"); });
+  });
+  ["dragleave", "dragend"].forEach(function (t) {
+    dropEl.addEventListener(t, function () { dropEl.classList.remove("drag"); });
+  });
+  dropEl.addEventListener("drop", function (e) {
+    e.preventDefault();
+    dropEl.classList.remove("drag");
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) handler(f);
+  });
+};
+window.addEventListener("dragover", function (e) { e.preventDefault(); });
+window.addEventListener("drop", function (e) { e.preventDefault(); });
+
+/* Tool 1: Background Remover */
+try {
+  (function () {
+    var MAX_DIM = 2400;
+    var drop = $("bgDrop"), input = $("bgInput"), hint = $("bgHint");
+    var editor = $("bgEditor"), canvas = $("bgCanvas");
+    var ctx = canvas.getContext("2d", { willReadFrequently: true });
+    var tol = $("bgTol"), tolVal = $("bgTolVal");
+    var soft = $("bgSoft"), softVal = $("bgSoftVal");
+    var compare = $("bgCompare"), dl = $("bgDownload"), reset = $("bgReset");
+    var src = null, proc = null, name = "image";
+
+    function floodMask(data, w, h, tolDist) {
+      var n = w * h;
+      var mask = new Uint8Array(n);
+      var stack = new Int32Array(n);
+      var tol2 = tolDist * tolDist;
+      var sp = 0;
+      for (var x = 0; x < w; x++) {
+        mask[x] = 1; stack[sp++] = x;
+        var b = (h - 1) * w + x;
+        if (!mask[b]) { mask[b] = 1; stack[sp++] = b; }
+      }
+      for (var y = 0; y < h; y++) {
+        var l = y * w;
+        if (!mask[l]) { mask[l] = 1; stack[sp++] = l; }
+        var r = l + w - 1;
+        if (!mask[r]) { mask[r] = 1; stack[sp++] = r; }
+      }
+      while (sp > 0) {
+        var i = stack[--sp];
+        var p = i << 2;
+        var r0 = data[p], g0 = data[p + 1], b0 = data[p + 2];
+        var xx = i % w, yy = (i / w) | 0;
+        var tryN = function (j) {
+          if (mask[j]) return;
+          var q = j << 2;
+          var dr = data[q] - r0, dg = data[q + 1] - g0, db = data[q + 2] - b0;
+          if (dr * dr + dg * dg + db * db <= tol2) { mask[j] = 1; stack[sp++] = j; }
+        };
+        if (xx > 0) tryN(i - 1);
+        if (xx < w - 1) tryN(i + 1);
+        if (yy > 0) tryN(i - w);
+        if (yy < h - 1) tryN(i + w);
+      }
+      return mask;
+    }
+
+    function boxBlur(srcArr, w, h, r) {
+      var div = 2 * r + 1;
+      var tmp = new Float32Array(w * h);
+      var out = new Float32Array(w * h);
+      for (var y = 0; y < h; y++) {
+        var row = y * w;
+        var sum = 0;
+        for (var k = -r; k <= r; k++) sum += srcArr[row + clamp(k, 0, w - 1)];
+        for (var x = 0; x < w; x++) {
+          tmp[row + x] = sum / div;
+          sum += srcArr[row + clamp(x + r + 1, 0, w - 1)] - srcArr[row + clamp(x - r, 0, w - 1)];
         }
+      }
+      for (var x2 = 0; x2 < w; x2++) {
+        var sum2 = 0;
+        for (var k2 = -r; k2 <= r; k2++) sum2 += tmp[clamp(k2, 0, h - 1) * w + x2];
+        for (var y2 = 0; y2 < h; y2++) {
+          out[y2 * w + x2] = sum2 / div;
+          sum2 += tmp[clamp(y2 + r + 1, 0, h - 1) * w + x2] - tmp[clamp(y2 - r, 0, h - 1) * w + x2];
+        }
+      }
+      return out;
+    }
 
-        // ==========================================
-        // 2. Image Compressor
-        // ==========================================
-        const compInput = document.getElementById('comp-input');
-        compInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+    function process() {
+      if (!src) return;
+      var w = src.width, h = src.height;
+      var tolDist = Number(tol.value) * 1.6;
+      var softV = Number(soft.value);
+      var mask = floodMask(src.data, w, h, tolDist);
+      var alpha = new Float32Array(w * h);
+      for (var i = 0; i < alpha.length; i++) alpha[i] = mask[i] ? 0 : 255;
+      if (softV > 0) {
+        alpha = boxBlur(alpha, w, h, softV);
+        for (var j = 0; j < alpha.length; j++) {
+          var t = alpha[j] / 255;
+          alpha[j] = t * t * (3 - 2 * t) * 255;
+        }
+      }
+      var out = new Uint8ClampedArray(src.data);
+      for (var k = 0; k < alpha.length; k++) out[(k << 2) + 3] = alpha[k];
+      proc = new ImageData(out, w, h);
+      render();
+    }
 
-            const origSize = (file.size / 1024).toFixed(1) + " KB";
-            document.getElementById('comp-orig-size').innerText = origSize;
-            
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    canvas.width = img.width * 0.7;
+    function render() {
+      if (!src) return;
+      var showOrig = compare.checked || !proc;
+      ctx.putImageData(showOrig ? src : proc, 0, 0);
+    }
+
+    function handleFile(file) {
+      if (!file.type || file.type.indexOf("image/") !== 0) return setHint(hint, "That file is not an image.", true);
+      setHint(hint, "Loading…");
+      loadImage(file).then(function (img) {
+        name = (file.name || "image").replace(/\.[^.]+$/, "") || "image";
+        var scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+        var w = Math.max(1, Math.round(img           canvas.width = img.width * 0.7;
                     canvas.height = img.height * 0.7;
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     
