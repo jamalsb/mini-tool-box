@@ -38,6 +38,7 @@
   }
   .brand .sub { font-weight: 400; color: var(--muted); font-size: .72rem; margin-left: 4px; }
 
+  /* Tabs */
   .tabs { background: var(--card); border-bottom: 1px solid var(--border); position: sticky; top: 57px; z-index: 19; }
   .tabs-inner {
     max-width: 1000px; margin: 0 auto;
@@ -316,7 +317,10 @@
 </footer>
 
 <script>
-/* GLOBAL showTool */
+/* ============================================================
+   GLOBAL showTool — inline onclick="showTool('bg')" calls this.
+   Defined before anything else so it ALWAYS works.
+   ============================================================ */
 window.showTool = function (name) {
   try {
     var sections = document.querySelectorAll(".tool");
@@ -345,18 +349,21 @@ window.showTool = function (name) {
   }
 };
 
-/* Support URL hash */
+/* Support opening a specific tool via URL hash: tools.html#qr */
 (function () {
   var hash = (location.hash || "").replace("#", "");
   var valid = ["bg", "compress", "qr", "password"];
   if (valid.indexOf(hash) !== -1) window.showTool(hash);
+
   window.addEventListener("hashchange", function () {
     var h = (location.hash || "").replace("#", "");
     if (valid.indexOf(h) !== -1) window.showTool(h);
   });
 })();
 
-/* Shared helpers */
+/* ============================================================
+   Shared helpers
+   ============================================================ */
 var $ = function (id) { return document.getElementById(id); };
 var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
 var formatBytes = function (b) {
@@ -405,7 +412,9 @@ var bindDrop = function (dropEl, inputEl, handler) {
 window.addEventListener("dragover", function (e) { e.preventDefault(); });
 window.addEventListener("drop", function (e) { e.preventDefault(); });
 
-/* Tool 1: Background Remover */
+/* ============================================================
+   Tool 1: Background Remover
+   ============================================================ */
 try {
   (function () {
     var MAX_DIM = 2400;
@@ -563,7 +572,9 @@ try {
   })();
 } catch (e) { console.error("BG tool failed:", e); }
 
-/* Tool 2: Image Compressor */
+/* ============================================================
+   Tool 2: Image Compressor
+   ============================================================ */
 try {
   (function () {
     var drop = $("compDrop"), input = $("compInput"), hint = $("compHint");
@@ -631,53 +642,26 @@ try {
   })();
 } catch (e) { console.error("Compress tool failed:", e); }
 
-/* Tool 3: QR Code Generator — Multi-CDN Fallback */
+/* ============================================================
+   Tool 3: QR Code Generator — library loads on first click
+   ============================================================ */
 try {
   (function () {
     var input = $("qrInput"), sizeSel = $("qrSize"), canvas = $("qrCanvas");
     var gen = $("qrGen"), dl = $("qrDownload"), hint = $("qrHint");
     var libLoaded = false, libLoading = null, qrBlob = null;
 
-    var CDN_URLS = [
-      "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js",
-      "https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js",
-      "https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js",
-      "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.js"
-    ];
-
-    function tryLoadScript(url) {
-      return new Promise(function (resolve, reject) {
-        var s = document.createElement("script");
-        s.src = url;
-        var timer = setTimeout(function () { 
-          s.remove(); 
-          reject(new Error("timeout")); 
-        }, 8000);
-        s.onload = function () { clearTimeout(timer); resolve(); };
-        s.onerror = function () { clearTimeout(timer); s.remove(); reject(new Error("failed")); };
-        document.head.appendChild(s);
-      });
-    }
-
     function loadLib() {
       if (libLoaded) return Promise.resolve();
       if (libLoading) return libLoading;
-
-      libLoading = (async function () {
-        for (var i = 0; i < CDN_URLS.length; i++) {
-          try {
-            await tryLoadScript(CDN_URLS[i]);
-            if (typeof QRCode !== "undefined") {
-              libLoaded = true;
-              return;
-            }
-          } catch (err) {
-            console.warn("CDN failed: " + CDN_URLS[i], err);
-          }
-        }
-        throw new Error("All QR libraries failed to load.");
-      })();
-
+      libLoading = new Promise(function (resolve, reject) {
+        var s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js";
+        var timer = setTimeout(function () { reject(new Error("timeout")); }, 10000);
+        s.onload = function () { clearTimeout(timer); libLoaded = true; resolve(); };
+        s.onerror = function () { clearTimeout(timer); reject(new Error("load failed")); };
+        document.head.appendChild(s);
+      });
       return libLoading;
     }
 
@@ -685,7 +669,6 @@ try {
       var text = input.value.trim() || "https://example.com";
       var size = parseInt(sizeSel.value, 10) || 300;
       setHint(hint, "Preparing…");
-      
       loadLib().then(function () {
         canvas.width = size; canvas.height = size;
         QRCode.toCanvas(canvas, text, {
@@ -694,10 +677,10 @@ try {
         }, function (err) {
           if (err) { setHint(hint, "Could not generate the QR code.", true); return; }
           canvas.toBlob(function (b) { if (b) { qrBlob = b; dl.disabled = false; } }, "image/png");
-          setHint(hint, "✓ QR Code ready!");
+          setHint(hint, "");
         });
       }).catch(function () {
-        setHint(hint, "❌ QR library load nahi ho saki. Internet check karein ya page refresh karein.", true);
+        setHint(hint, "Could not load the QR library — check your internet connection.", true);
       });
     }
 
@@ -708,7 +691,9 @@ try {
   })();
 } catch (e) { console.error("QR tool failed:", e); }
 
-/* Tool 4: Password Generator */
+/* ============================================================
+   Tool 4: Password Generator
+   ============================================================ */
 try {
   (function () {
     var out = $("pwdOut"), len = $("pwdLen"), lenVal = $("pwdLenVal");
@@ -757,7 +742,9 @@ try {
   })();
 } catch (e) { console.error("Password tool failed:", e); }
 
-/* Ready indicator */
+/* ============================================================
+   Ready indicator — user can SEE if JS actually ran
+   ============================================================ */
 (function () {
   try {
     var el = $("jsStatus");
