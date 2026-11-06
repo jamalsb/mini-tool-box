@@ -38,7 +38,6 @@
   }
   .brand .sub { font-weight: 400; color: var(--muted); font-size: .72rem; margin-left: 4px; }
 
-  /* Tabs */
   .tabs { background: var(--card); border-bottom: 1px solid var(--border); position: sticky; top: 57px; z-index: 19; }
   .tabs-inner {
     max-width: 1000px; margin: 0 auto;
@@ -317,10 +316,7 @@
 </footer>
 
 <script>
-/* ============================================================
-   GLOBAL showTool — inline onclick="showTool('bg')" calls this.
-   Defined before anything else so it ALWAYS works.
-   ============================================================ */
+/* GLOBAL showTool */
 window.showTool = function (name) {
   try {
     var sections = document.querySelectorAll(".tool");
@@ -349,21 +345,18 @@ window.showTool = function (name) {
   }
 };
 
-/* Support opening a specific tool via URL hash: tools.html#qr */
+/* Support URL hash */
 (function () {
   var hash = (location.hash || "").replace("#", "");
   var valid = ["bg", "compress", "qr", "password"];
   if (valid.indexOf(hash) !== -1) window.showTool(hash);
-
   window.addEventListener("hashchange", function () {
     var h = (location.hash || "").replace("#", "");
     if (valid.indexOf(h) !== -1) window.showTool(h);
   });
 })();
 
-/* ============================================================
-   Shared helpers
-   ============================================================ */
+/* Shared helpers */
 var $ = function (id) { return document.getElementById(id); };
 var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
 var formatBytes = function (b) {
@@ -412,9 +405,7 @@ var bindDrop = function (dropEl, inputEl, handler) {
 window.addEventListener("dragover", function (e) { e.preventDefault(); });
 window.addEventListener("drop", function (e) { e.preventDefault(); });
 
-/* ============================================================
-   Tool 1: Background Remover
-   ============================================================ */
+/* Tool 1: Background Remover */
 try {
   (function () {
     var MAX_DIM = 2400;
@@ -519,240 +510,4 @@ try {
       loadImage(file).then(function (img) {
         name = (file.name || "image").replace(/\.[^.]+$/, "") || "image";
         var scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
-        var w = Math.max(1, Math.round(img.naturalWidth * scale));
-        var h = Math.max(1, Math.round(img.naturalHeight * scale));
-        canvas.width = w; canvas.height = h;
-        ctx.clearRect(0, 0, w, h);
-        ctx.drawImage(img, 0, 0, w, h);
-        src = ctx.getImageData(0, 0, w, h);
-        proc = null;
-        compare.checked = false;
-        drop.hidden = true; editor.hidden = false; dl.disabled = false;
-        setHint(hint, scale < 1 ? "Image scaled to " + w + "×" + h + "px." : w + "×" + h + "px · local.");
-        process();
-      }).catch(function () { setHint(hint, "Sorry, could not read that image.", true); });
-    }
-
-    bindDrop(drop, input, handleFile);
-
-    var timer;
-    var sched = function () { clearTimeout(timer); timer = setTimeout(process, 60); };
-    tol.addEventListener("input", function () { tolVal.textContent = tol.value; sched(); });
-    soft.addEventListener("input", function () { softVal.textContent = soft.value; sched(); });
-    compare.addEventListener("change", render);
-
-    dl.addEventListener("click", function () {
-      if (!proc) return;
-      var tmp = document.createElement("canvas");
-      tmp.width = proc.width; tmp.height = proc.height;
-      tmp.getContext("2d").putImageData(proc, 0, 0);
-      tmp.toBlob(function (b) { if (b) downloadBlob(b, name + "-no-bg.png"); }, "image/png");
-    });
-
-    reset.addEventListener("click", function () {
-      input.value = "";
-      editor.hidden = true; drop.hidden = false;
-      src = null; proc = null;
-      setHint(hint, "");
-      input.click();
-    });
-
-    window.addEventListener("paste", function (e) {
-      if ($("tool-bg").getBoundingClientRect().height === 0) return;
-      var items = e.clipboardData && e.clipboardData.items;
-      if (!items) return;
-      for (var i = 0; i < items.length; i++) {
-        if (items[i].type && items[i].type.indexOf("image/") === 0) {
-          var f = items[i].getAsFile();
-          if (f) { e.preventDefault(); handleFile(f); }
-          break;
-        }
-      }
-    });
-  })();
-} catch (e) { console.error("BG tool failed:", e); }
-
-/* ============================================================
-   Tool 2: Image Compressor
-   ============================================================ */
-try {
-  (function () {
-    var drop = $("compDrop"), input = $("compInput"), hint = $("compHint");
-    var editor = $("compEditor"), preview = $("compPreview");
-    var q = $("compQ"), qv = $("compQVal"), fmt = $("compFormat");
-    var origEl = $("compOrig"), newEl = $("compNew"), savings = $("compSavings");
-    var dl = $("compDownload"), reset = $("compReset");
-    var file = null, img = null, blob = null;
-
-    function update() {
-      if (!img) return;
-      var canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      canvas.getContext("2d").drawImage(img, 0, 0);
-      var quality = Number(q.value) / 100;
-      canvas.toBlob(function (b) {
-        if (!b) return;
-        blob = b;
-        if (preview.src.indexOf("blob:") === 0) URL.revokeObjectURL(preview.src);
-        preview.src = URL.createObjectURL(b);
-        newEl.textContent = formatBytes(b.size);
-        var saved = (1 - b.size / file.size) * 100;
-        if (saved > 0) {
-          savings.textContent = "✓ " + saved.toFixed(1) + "% smaller";
-          savings.style.color = "#15803d";
-        } else {
-          savings.textContent = "no savings at these settings";
-          savings.style.color = "#b45309";
-        }
-        dl.disabled = false;
-      }, fmt.value, quality);
-    }
-
-    bindDrop(drop, input, function (f) {
-      if (!f.type || f.type.indexOf("image/") !== 0) return setHint(hint, "That file is not an image.", true);
-      file = f;
-      loadImage(f).then(function (im) {
-        img = im;
-        drop.hidden = true; editor.hidden = false;
-        origEl.textContent = formatBytes(f.size);
-        setHint(hint, im.naturalWidth + "×" + im.naturalHeight + "px · drag the quality slider");
-        update();
-      }).catch(function () { setHint(hint, "Sorry, could not read that image.", true); });
-    });
-
-    q.addEventListener("input", function () { qv.textContent = q.value; update(); });
-    fmt.addEventListener("change", update);
-
-    dl.addEventListener("click", function () {
-      if (!blob) return;
-      var ext = fmt.value === "image/jpeg" ? "jpg" : fmt.value === "image/webp" ? "webp" : "png";
-      downloadBlob(blob, "compressed." + ext);
-    });
-
-    reset.addEventListener("click", function () {
-      input.value = "";
-      editor.hidden = true; drop.hidden = false;
-      file = null; img = null; blob = null; dl.disabled = true;
-      if (preview.src.indexOf("blob:") === 0) URL.revokeObjectURL(preview.src);
-      preview.removeAttribute("src");
-      setHint(hint, "");
-      input.click();
-    });
-  })();
-} catch (e) { console.error("Compress tool failed:", e); }
-
-/* ============================================================
-   Tool 3: QR Code Generator — library loads on first click
-   ============================================================ */
-try {
-  (function () {
-    var input = $("qrInput"), sizeSel = $("qrSize"), canvas = $("qrCanvas");
-    var gen = $("qrGen"), dl = $("qrDownload"), hint = $("qrHint");
-    var libLoaded = false, libLoading = null, qrBlob = null;
-
-    function loadLib() {
-      if (libLoaded) return Promise.resolve();
-      if (libLoading) return libLoading;
-      libLoading = new Promise(function (resolve, reject) {
-        var s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js";
-        var timer = setTimeout(function () { reject(new Error("timeout")); }, 10000);
-        s.onload = function () { clearTimeout(timer); libLoaded = true; resolve(); };
-        s.onerror = function () { clearTimeout(timer); reject(new Error("load failed")); };
-        document.head.appendChild(s);
-      });
-      return libLoading;
-    }
-
-    function generate() {
-      var text = input.value.trim() || "https://example.com";
-      var size = parseInt(sizeSel.value, 10) || 300;
-      setHint(hint, "Preparing…");
-      loadLib().then(function () {
-        canvas.width = size; canvas.height = size;
-        QRCode.toCanvas(canvas, text, {
-          width: size, margin: 2,
-          color: { dark: "#111827", light: "#ffffff" }
-        }, function (err) {
-          if (err) { setHint(hint, "Could not generate the QR code.", true); return; }
-          canvas.toBlob(function (b) { if (b) { qrBlob = b; dl.disabled = false; } }, "image/png");
-          setHint(hint, "");
-        });
-      }).catch(function () {
-        setHint(hint, "Could not load the QR library — check your internet connection.", true);
-      });
-    }
-
-    gen.addEventListener("click", generate);
-    input.addEventListener("keydown", function (e) { if (e.key === "Enter") generate(); });
-    sizeSel.addEventListener("change", generate);
-    dl.addEventListener("click", function () { if (qrBlob) downloadBlob(qrBlob, "qrcode.png"); });
-  })();
-} catch (e) { console.error("QR tool failed:", e); }
-
-/* ============================================================
-   Tool 4: Password Generator
-   ============================================================ */
-try {
-  (function () {
-    var out = $("pwdOut"), len = $("pwdLen"), lenVal = $("pwdLenVal");
-    var up = $("pwdUpper"), low = $("pwdLower"), num = $("pwdNum"), sym = $("pwdSym");
-    var gen = $("pwdGen"), copy = $("pwdCopy");
-
-    var SETS = {
-      up:  "ABCDEFGHJKLMNPQRSTUVWXYZ",
-      low: "abcdefghijkmnopqrstuvwxyz",
-      num: "23456789",
-      sym: "!@#$%^&*()-_=+[]{};:,.<>?"
-    };
-
-    function genPwd() {
-      var chars = "";
-      if (up.checked) chars += SETS.up;
-      if (low.checked) chars += SETS.low;
-      if (num.checked) chars += SETS.num;
-      if (sym.checked) chars += SETS.sym;
-      if (!chars) chars = SETS.low;
-      var n = Number(len.value);
-      var arr = new Uint32Array(n);
-      crypto.getRandomValues(arr);
-      var s = "";
-      for (var i = 0; i < n; i++) s += chars[arr[i] % chars.length];
-      out.value = s;
-    }
-
-    len.addEventListener("input", function () { lenVal.textContent = len.value; });
-    gen.addEventListener("click", genPwd);
-    copy.addEventListener("click", function () {
-      if (!out.value || out.value === "click generate") return;
-      navigator.clipboard.writeText(out.value).then(function () {
-        var t = copy.textContent;
-        copy.textContent = "Copied!";
-        setTimeout(function () { copy.textContent = t; }, 1100);
-      }).catch(function () { alert("Copy failed — please select and copy manually."); });
-    });
-    [up, low, num, sym].forEach(function (c) {
-      c.addEventListener("change", function () {
-        if (out.value !== "click generate") genPwd();
-      });
-    });
-
-    genPwd();
-  })();
-} catch (e) { console.error("Password tool failed:", e); }
-
-/* ============================================================
-   Ready indicator — user can SEE if JS actually ran
-   ============================================================ */
-(function () {
-  try {
-    var el = $("jsStatus");
-    el.textContent = "✓ Ready — click any tab above to switch tools";
-    el.classList.add("ok");
-  } catch (e) { /* ignore */ }
-})();
-</script>
-
-</body>
-</html>
+        var w = Math.max(1, Math.round(img
