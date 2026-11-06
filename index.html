@@ -1,263 +1,466 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MiniToolBox — 4 Free Online Tools</title>
-<meta name="description" content="Free online tools: Background Remover, Image Compressor, QR Code Generator and Password Generator. Everything runs in your browser.">
-<style>
-  * { box-sizing: border-box; }
-  [hidden] { display: none !important; }
-  :root {
-    --blue: #2563eb;
-    --blue-dark: #1d4ed8;
-    --bg: #f4f6fb;
-    --card: #fff;
-    --border: #e5e7eb;
-    --text: #1f2937;
-    --muted: #6b7280;
-  }
-  html, body { margin: 0; padding: 0; }
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg); color: var(--text); line-height: 1.5;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniToolBox - Free Online Tools</title>
+    
+    <!-- QR Code Library (Updated to a reliable source) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  /* Header */
-  header.top {
-    background: var(--card); border-bottom: 1px solid var(--border);
-    padding: 12px 16px; position: sticky; top: 0; z-index: 20;
-  }
-  .top-inner {
-    max-width: 1000px; margin: 0 auto;
-    display: flex; align-items: center; gap: 12px;
-  }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; }
-  .brand .logo {
-    width: 32px; height: 32px; border-radius: 9px;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: .85rem;
-  }
-  .brand .sub { font-weight: 400; color: var(--muted); font-size: .72rem; margin-left: 4px; }
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
 
-  /* Tabs */
-  .tabs {
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    position: sticky; top: 57px; z-index: 19;
-  }
-  .tabs-inner {
-    max-width: 1000px; margin: 0 auto;
-    display: flex; gap: 4px; padding: 8px 12px; overflow-x: auto;
-  }
-  .tabs-inner button {
-    border: 0; background: transparent; font: inherit; font-size: .875rem;
-    padding: 8px 14px; border-radius: 9px; color: #374151;
-    cursor: pointer; white-space: nowrap; transition: .15s;
-  }
-  .tabs-inner button:hover { background: #f3f4f6; }
-  .tabs-inner button.active {
-    background: #eff6ff; color: var(--blue-dark); font-weight: 600;
-  }
+        body {
+            background-color: #f4f7f9;
+            color: #333;
+            padding-bottom: 50px;
+        }
 
-  /* Layout */
-  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
-  .tool {
-    background: var(--card); border-radius: 16px; padding: 22px;
-    box-shadow: 0 4px 18px rgba(0,0,0,.06);
-  }
-  .tool h2 { margin: 0 0 4px; font-size: 1.2rem; }
-  .tool .lead { margin: 0 0 18px; color: var(--muted); font-size: .85rem; }
+        header {
+            background: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
 
-  /* Drop zone */
-  .drop {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 34px 20px; border: 2px dashed #93c5fd; border-radius: 12px;
-    background: #f8faff; cursor: pointer; text-align: center; transition: .15s;
-  }
-  .drop:hover, .drop.drag { border-color: #3b82f6; background: #eff6ff; }
-  .drop svg { color: #60a5fa; }
-  .drop strong { font-size: 1rem; }
-  .drop span { color: var(--muted); font-size: .8rem; }
+        header h1 {
+            font-size: 1.5rem;
+            color: #111;
+        }
 
-  .hint {
-    margin: 10px 0 0; font-size: .8rem; color: var(--muted);
-    text-align: center; min-height: 1em;
-  }
-  .hint.error { color: #b91c1c; }
+        header h1 span {
+            font-size: 0.8rem;
+            color: #888;
+            font-weight: normal;
+        }
 
-  /* Checkerboard preview box */
-  .preview-box {
-    margin-top: 16px; display: grid; place-items: center; padding: 8px;
-    border-radius: 12px; background-color: #fff;
-    background-image:
-      linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
-      linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
-      linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
-    background-size: 20px 20px;
-    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
-    box-shadow: inset 0 0 0 1px var(--border);
-  }
-  .preview-box img, .preview-box canvas {
-    display: block; max-width: 100%; max-height: 55vh; border-radius: 6px;
-  }
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+            background: white;
+            padding: 10px;
+            gap: 10px;
+            scrollbar-width: none;
+        }
 
-  /* Controls */
-  .controls {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 14px 22px; margin-top: 18px;
-  }
-  .control { display: block; font-size: .85rem; color: #374151; }
-  .control b { color: var(--blue-dark); font-variant-numeric: tabular-nums; }
-  .control input[type="range"] { width: 100%; margin-top: 6px; accent-color: var(--blue); }
-  .control input[type="number"], .control input[type="text"], .control select {
-    width: 100%; margin-top: 6px; padding: 8px 10px;
-    border: 1px solid var(--border); border-radius: 8px;
-    font: inherit; font-size: .875rem; background: #fff; color: var(--text);
-  }
-  .control input:focus, .control select:focus {
-    outline: 2px solid #bfdbfe; border-color: var(--blue);
-  }
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
 
-  /* Buttons / rows */
-  .row {
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 12px; margin-top: 16px;
-  }
-  .check {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: .85rem; color: #374151; cursor: pointer; user-select: none;
-  }
-  .check input { accent-color: var(--blue); }
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #555;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
 
-  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
-  .btn {
-    font: inherit; font-size: .875rem; padding: 9px 16px;
-    border-radius: 9px; border: 1px solid #d1d5db;
-    background: #fff; color: var(--text); cursor: pointer; transition: .15s;
-  }
-  .btn:hover { background: #f3f4f6; }
-  .btn:active { transform: translateY(1px); }
-  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
-  .btn.primary:hover { background: var(--blue-dark); }
-  .btn.primary:disabled { opacity: .55; cursor: not-allowed; }
+        .tab-btn.active {
+            background: #e8f0fe;
+            color: #1a73e8;
+            font-weight: 600;
+        }
 
-  /* Stats */
-  .stat { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; font-size: .85rem; }
-  .stat div { background: #f8faff; border-radius: 8px; padding: 8px 12px; }
-  .stat b { color: var(--blue-dark); }
+        .tool-section {
+            display: none;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
 
-  /* Password output */
-  .pwd-out {
-    display: flex; align-items: center; justify-content: center;
-    width: 100%; padding: 16px 18px;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-    font-size: 1.1rem; border: 0; background: transparent;
-    text-align: center; color: #111827; letter-spacing: .02em;
-    word-break: break-all;
-  }
+        .tool-section.active {
+            display: block;
+        }
 
-  /* QR canvas */
-  #qrCanvas { background: #fff; border-radius: 6px; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
 
-  /* Footer */
-  footer.bot {
-    text-align: center; color: var(--muted); font-size: .75rem;
-    padding: 24px 16px 32px;
-  }
+        .card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+        }
 
-  /* Responsive */
-  @media (max-width: 640px) {
-    .tabs { top: 57px; }
-    .controls { grid-template-columns: 1fr; }
-    .tool { padding: 16px; }
-  }
-</style>
+        .desc {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .drop-zone {
+            border: 2px dashed #a0c4ff;
+            background: #f8fbff;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .drop-zone:hover {
+            background: #eef5ff;
+        }
+
+        .drop-zone span {
+            font-size: 2rem;
+            color: #3b82f6;
+        }
+
+        .drop-zone h3 {
+            font-size: 1.1rem;
+            margin: 10px 0 5px;
+            color: #333;
+        }
+
+        .drop-zone p {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .download-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-top: 15px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        .download-btn:hover {
+            background: #2563eb;
+        }
+
+        .download-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .file-input-simple {
+            width: 100%;
+            padding: 15px;
+            background: #f8fbff;
+            border: 2px dashed #a0c4ff;
+            border-radius: 8px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .text-input:focus {
+            border-color: #3b82f6;
+        }
+
+        .result-area {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .result-area h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
 
-<header class="top">
-  <div class="top-inner">
-    <div class="brand">
-      <div class="logo">MT</div>
-      <div>MiniToolBox <span class="sub">free · offline · private</span></div>
+    <header>
+        <h1>MiniToolBox <span>free · offline · private</span></h1>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTool('bg-remover', this)">Background Remover</button>
+        <button class="tab-btn" onclick="openTool('compressor', this)">Image Compressor</button>
+        <button class="tab-btn" onclick="openTool('qr-generator', this)">QR Code Generator</button>
+        <button class="tab-btn" onclick="openTool('video-logo', this)">Video Logo Remover</button>
     </div>
-  </div>
-</header>
 
-<div class="tabs">
-  <div class="tabs-inner" id="tabs">
-    <button data-target="bg" class="active">Background Remover</button>
-    <button data-target="compress">Image Compressor</button>
-    <button data-target="qr">QR Code Generator</button>
-    <button data-target="password">Password Generator</button>
-  </div>
-</div>
-
-<main>
-
-  <!-- ============================================================ -->
-  <!-- 1) BACKGROUND REMOVER                                        -->
-  <!-- ============================================================ -->
-  <section class="tool" data-tool="bg" id="tool-bg">
-    <h2>Background Remover</h2>
-    <p class="lead">Remove an image's background — everything happens locally in your browser.</p>
-    <label class="drop" id="bgDrop" for="bgInput">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/>
-        <line x1="12" y1="3" x2="12" y2="15"/>
-      </svg>
-      <strong>Drop an image here</strong>
-      <span>or click to choose · you can also paste with Ctrl+V</span>
-      <input type="file" id="bgInput" accept="image/*" hidden>
-    </label>
-    <p class="hint" id="bgHint"></p>
-    <div id="bgEditor" hidden>
-      <div class="preview-box"><canvas id="bgCanvas"></canvas></div>
-      <div class="controls">
-        <label class="control">Background tolerance <b id="bgTolVal">25</b>
-          <input type="range" id="bgTol" min="1" max="100" value="25">
-        </label>
-        <label class="control">Edge softness <b id="bgSoftVal">1</b>
-          <input type="range" id="bgSoft" min="0" max="3" value="1">
-        </label>
-      </div>
-      <div class="row">
-        <label class="check"><input type="checkbox" id="bgCompare"> Show original</label>
-        <div class="actions">
-          <button class="btn primary" id="bgDownload">Download PNG</button>
-          <button class="btn" id="bgReset">Choose another</button>
+    <!-- Tool 1: Background Remover -->
+    <div id="bg-remover" class="tool-section active">
+        <div class="card">
+            <h2>Background Remover</h2>
+            <p class="desc">Remove an image's background — everything happens locally in your browser.</p>
+            <div class="drop-zone" id="bg-zone">
+                <span>⬆️</span>
+                <h3>Drop an image here</h3>
+                <p>or click to choose</p>
+                <input type="file" id="bg-input" accept="image/*" hidden>
+            </div>
+            <div id="bg-result" class="result-area" style="display:none;">
+                <h4>Background Removed (Preview):</h4>
+                <img id="bg-img" style="max-width: 100%; border-radius: 8px;">
+                <button class="download-btn" id="bg-download">Download Image</button>
+            </div>
         </div>
-      </div>
     </div>
-  </section>
 
-  <!-- ============================================================ -->
-  <!-- 2) IMAGE COMPRESSOR                                          -->
-  <!-- ============================================================ -->
-  <section class="tool" data-tool="compress" id="tool-compress" hidden>
-    <h2>Image Compressor</h2>
-    <p class="lead">Reduce file size while keeping quality. Adjust the slider to balance.</p>
-    <label class="drop" id="compDrop" for="compInput">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/>
-        <line x1="12" y1="3" x2="12" y2="15"/>
-      </svg>
-      <strong>Drop an image here</strong>
-      <span>or click to choose</span>
-      <input type="file" id="compInput" accept="image/*" hidden>
-    </label>
-    <p class="hint" id="compHint"></p>
-    <div id="compEditor" hidden>
-      <div class="preview-box"><img id="compPreview" alt=""></div>
-      <div class="controls">
-        <label class="control">Quality <b id="compQVal">75</b>
-          <input type="range" id="compQ" min="10" max="100" value="75">
+    <!-- Tool 2: Image Compressor -->
+    <div id="compressor" class="tool-section">
+        <div class="card">
+            <h2>Image Compressor</h2>
+            <p class="desc">Reduce image file size without losing visible quality.</p>
+            <input type="file" id="comp-input" accept="image/*" class="file-input-simple">
+            <div id="comp-result" style="display:none; margin-top: 15px;">
+                <p>Original: <span id="comp-orig-size"></span></p>
+                <p>Compressed: <span id="comp-new-size" style="color: #3b82f6; font-weight: bold;"></span></p>
+                <button class="download-btn" id="comp-download">Download Compressed</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tool 3: QR Code Generator -->
+    <div id="qr-generator" class="tool-section">
+        <div class="card">
+            <h2>QR Code Generator</h2>
+            <p class="desc">Create a QR code for any link or text.</p>
+            <input type="text" id="qr-input" placeholder="Enter link or text here..." class="text-input">
+            <div id="qr-preview" style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                <div id="qr-code" style="background: white; padding: 10px; border-radius: 8px; min-height: 50px;"></div>
+                <button class="download-btn" id="qr-download" style="display: none;">Download QR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tool 4: Video Logo Remover -->
+    <div id="video-logo" class="tool-section">
+        <div class="card">
+            <h2>AI Video Logo Remover</h2>
+            <p class="desc">Remove unwanted logos from your own videos. (Requires backend to process)</p>
+            
+            <div class="drop-zone" id="video-drop-zone">
+                <span>🎬</span>
+                <h3>Drop your video here</h3>
+                <p>MP4, MOV, WebM · Max 200 MB</p>
+                <input type="file" id="video-input" accept="video/mp4,video/webm" hidden>
+            </div>
+            
+            <div id="video-editor" style="display:none; margin-top: 20px;">
+                <p style="font-size: 14px; color: #a0a0a0; margin-bottom: 10px;">Pause video and select the area over the logo:</p>
+                <video id="preview-video" controls playsinline style="width: 100%; border-radius: 8px; background: #000;"></video>
+                
+                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="download-btn" id="process-video-btn" disabled>Remove Logo</button>
+                    <button class="download-btn" style="background: #333;" id="reset-video-btn">Start Over</button>
+                </div>
+                <p id="video-status" style="margin-top: 10px; color: #3b82f6; font-size: 14px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. Tab Switching Logic
+        // ==========================================
+        function openTool(toolId, btnElement) {
+            document.querySelectorAll('.tool-section').forEach(sec => {
+                sec.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            document.getElementById(toolId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // ==========================================
+        // 2. Image Compressor
+        // ==========================================
+        const compInput = document.getElementById('comp-input');
+        compInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const origSize = (file.size / 1024).toFixed(1) + " KB";
+            document.getElementById('comp-orig-size').innerText = origSize;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    canvas.width = img.width * 0.7;
+                    canvas.height = img.height * 0.7;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    canvas.toBlob(function(blob) {
+                        const newSize = (blob.size / 1024).toFixed(1) + " KB";
+                        document.getElementById('comp-new-size').innerText = newSize;
+                        
+                        const url = URL.createObjectURL(blob);
+                        const downloadBtn = document.getElementById('comp-download');
+                        downloadBtn.onclick = function() {
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'compressed_' + file.name;
+                            a.click();
+                        };
+                        document.getElementById('comp-result').style.display = 'block';
+                    }, 'image/jpeg', 0.7);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ==========================================
+        // 3. QR Code Generator (FIXED)
+        // ==========================================
+        const qrInput = document.getElementById('qr-input');
+        const qrCodeDiv = document.getElementById('qr-code');
+        const qrDownloadBtn = document.getElementById('qr-download');
+        let qrInstance = null;
+
+        qrInput.addEventListener('input', function() {
+            const text = this.value.trim();
+            
+            if (text.length > 0) {
+                qrCodeDiv.innerHTML = ''; // Clear previous
+                qrDownloadBtn.style.display = 'block'; // Show download button
+                
+                // Generate new QR Code
+                qrInstance = new QRCode(qrCodeDiv, {
+                    text: text,
+                    width: 200,
+                    height: 200,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            } else {
+                qrCodeDiv.innerHTML = '';
+                qrDownloadBtn.style.display = 'none';
+            }
+        });
+
+        qrDownloadBtn.onclick = function() {
+            const canvas = qrCodeDiv.querySelector('canvas');
+            if (!canvas) return alert("QR Code not generated yet.");
+            
+            const url = canvas.toDataURL("image/png");
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'qrcode.png';
+            a.click();
+        };
+
+        // ==========================================
+        // 4. Background Remover
+        // ==========================================
+        const bgZone = document.getElementById('bg-zone');
+        const bgInput = document.getElementById('bg-input');
+        const bgImg = document.getElementById('bg-img');
+
+        bgZone.onclick = () => bgInput.click();
+
+        bgInput.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imgData.data;
+                    
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        if (r > 200 && g > 200 && b > 200) {
+                            data[i + 3] = 0;
+                        }
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                    
+                    bgImg.src = canvas.toDataURL("image/png");
+                    document.getElementById('bg-result').style.display = 'block';
+                    
+                    document.getElementById('bg-download').onclick = function() {
+                        const a = document.createElement('a');
+                        a.href = bgImg.src;
+                        a.download = 'no_bg.png';
+                        a.click();
+                    };
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // ==========================================
+        // 5. Video Logo Remover (Frontend UI)
+        // ==========================================
+        const videoZone = document.getElementById('video-drop-zone');
+        const videoInput = document.getElementById('video-input');
+        const videoEditor = document.getElementById('video-editor');
+        const previewVideo = document.getElementById('preview-video');
+        const processBtn = document.getElementById('process-video-btn');
+        const resetBtn = document.getElementById('reset-video-btn');
+        const videoStatus = document.getElementById('video-status');
+
+        videoZone.onclick = () => videoInput.click();
+
+        videoInput.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const url = URL.createObjectURL(file);
+            previewVideo.src = url;
+            
+            videoZone.style.display = 'none';
+            videoEditor.style.display = 'block';
+            processBtn.disabled = false;
+            videoStatus.innerText = "Video loaded. (Processing requires Python Backend)";
+        };
+
+        resetBtn.onclick = function() {
+            previewVideo.src = '';
+            videoInput.value = '';
+            videoEditor.style.display = 'none';
+            videoZone.style.display = 'block';
+            videoStatus.innerText = '';
+        };
+
+        processBtn.onclick = function() {
+            videoStatus.innerText = "Processing... (Yeh button backend connect hone par kaam karega)";
+        };
+    </script>
+</body>
+ </html>d="compQ" min="10" max="100" value="75">
         </label>
         <label class="control">Format
           <select id="compFormat">
