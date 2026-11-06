@@ -510,472 +510,139 @@ try {
       loadImage(file).then(function (img) {
         name = (file.name || "image").replace(/\.[^.]+$/, "") || "image";
         var scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
-        var w = Math.max(1, Math.round(img         </select>
-        </label>
-      </div>
-      <div class="stat">
-        <div>Original: <b id="compOrig">—</b></div>
-        <div>Compressed: <b id="compNew">—</b></div>
-        <div id="compSavings"></div>
-      </div>
-      <div class="row">
-        <div class="actions">
-          <button type="button" class="btn primary" id="compDownload" disabled>Download</button>
-          <button type="button" class="btn" id="compReset">Choose another</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 3) QR CODE GENERATOR -->
-  <section class="tool" data-tool="qr" id="tool-qr">
-    <h2>QR Code Generator</h2>
-    <p class="lead">Create QR codes for links or text. Download as PNG.</p>
-    <label class="control">Text or URL
-      <input type="text" id="qrInput" placeholder="https://example.com" value="https://example.com">
-    </label>
-    <div class="row">
-      <label class="control" style="max-width:180px">Size (px)
-        <select id="qrSize">
-          <option>200</option>
-          <option selected>300</option>
-          <option>500</option>
-          <option>800</option>
-        </select>
-      </label>
-      <div class="actions">
-        <button type="button" class="btn primary" id="qrGen">Generate</button>
-        <button type="button" class="btn" id="qrDownload" disabled>Download PNG</button>
-      </div>
-    </div>
-    <p class="hint" id="qrHint"></p>
-    <div class="preview-box" style="margin-top:14px">
-      <canvas id="qrCanvas" width="300" height="300"></canvas>
-    </div>
-  </section>
-
-  <!-- 4) PASSWORD GENERATOR -->
-  <section class="tool" data-tool="password" id="tool-password">
-    <h2>Password Generator</h2>
-    <p class="lead">Strong random passwords generated with your browser's crypto.</p>
-    <div class="preview-box" style="margin-top:4px">
-      <input type="text" id="pwdOut" class="pwd-out" readonly value="click generate">
-    </div>
-    <div class="controls">
-      <label class="control">Length <b id="pwdLenVal">16</b>
-        <input type="range" id="pwdLen" min="4" max="64" value="16">
-      </label>
-      <div class="control">
-        <div style="margin-bottom:6px">Include</div>
-        <label class="check"><input type="checkbox" id="pwdUpper" checked> Uppercase (A-Z)</label><br>
-        <label class="check"><input type="checkbox" id="pwdLower" checked> Lowercase (a-z)</label><br>
-        <label class="check"><input type="checkbox" id="pwdNum" checked> Numbers (0-9)</label><br>
-        <label class="check"><input type="checkbox" id="pwdSym" checked> Symbols (!@#$)</label>
-      </div>
-    </div>
-    <div class="row">
-      <div class="actions">
-        <button type="button" class="btn primary" id="pwdGen">Generate</button>
-        <button type="button" class="btn" id="pwdCopy">Copy</button>
-      </div>
-    </div>
-  </section>
-
-</main>
-
-<footer class="bot">
-  MiniToolBox · all tools run 100% in your browser — nothing is uploaded.
-</footer>
-
-<script>
-/* GLOBAL showTool */
-window.showTool = function (name) {
-  try {
-    var sections = document.querySelectorAll(".tool");
-    for (var i = 0; i < sections.length; i++) {
-      var s = sections[i];
-      if (s.getAttribute("data-tool") === name) {
-        s.classList.add("active");
-      } else {
-        s.classList.remove("active");
-      }
+        var w = Math.max(1, Math.round(img.naturalWidth * scale));
+        var h = Math.max(1, Math.round(img.naturalHeight * scale));
+        canvas.width = w; canvas.height = h;
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        src = ctx.getImageData(0, 0, w, h);
+        proc = null;
+        compare.checked = false;
+        drop.hidden = true; editor.hidden = false; dl.disabled = false;
+        setHint(hint, scale < 1 ? "Image scaled to " + w + "×" + h + "px." : w + "×" + h + "px · local.");
+        process();
+      }).catch(function () { setHint(hint, "Sorry, could not read that image.", true); });
     }
-    var btns = document.querySelectorAll("#tabs button");
-    for (var j = 0; j < btns.length; j++) {
-      var b = btns[j];
-      var onclickAttr = b.getAttribute("onclick") || "";
-      if (onclickAttr.indexOf("'" + name + "'") !== -1) {
-        b.classList.add("active");
-      } else {
-        b.classList.remove("active");
+
+    bindDrop(drop, input, handleFile);
+
+    var timer;
+    var sched = function () { clearTimeout(timer); timer = setTimeout(process, 60); };
+    tol.addEventListener("input", function () { tolVal.textContent = tol.value; sched(); });
+    soft.addEventListener("input", function () { softVal.textContent = soft.value; sched(); });
+    compare.addEventListener("change", render);
+
+    dl.addEventListener("click", function () {
+      if (!proc) return;
+      var tmp = document.createElement("canvas");
+      tmp.width = proc.width; tmp.height = proc.height;
+      tmp.getContext("2d").putImageData(proc, 0, 0);
+      tmp.toBlob(function (b) { if (b) downloadBlob(b, name + "-no-bg.png"); }, "image/png");
+    });
+
+    reset.addEventListener("click", function () {
+      input.value = "";
+      editor.hidden = true; drop.hidden = false;
+      src = null; proc = null;
+      setHint(hint, "");
+      input.click();
+    });
+
+    window.addEventListener("paste", function (e) {
+      if ($("tool-bg").getBoundingClientRect().height === 0) return;
+      var items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.indexOf("image/") === 0) {
+          var f = items[i].getAsFile();
+          if (f) { e.preventDefault(); handleFile(f); }
+          break;
+        }
       }
-    }
-    try { history.replaceState(null, "", "#" + name); } catch (e) {}
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  } catch (err) {
-    console.error("showTool error:", err);
-  }
-};
+    });
+  })();
+} catch (e) { console.error("BG tool failed:", e); }
 
-/* Support URL hash */
-(function () {
-  var hash = (location.hash || "").replace("#", "");
-  var valid = ["bg", "compress", "qr", "password"];
-  if (valid.indexOf(hash) !== -1) window.showTool(hash);
-  window.addEventListener("hashchange", function () {
-    var h = (location.hash || "").replace("#", "");
-    if (valid.indexOf(h) !== -1) window.showTool(h);
-  });
-})();
-
-/* Shared helpers */
-var $ = function (id) { return document.getElementById(id); };
-var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
-var formatBytes = function (b) {
-  return b < 1024 ? b + " B" :
-         b < 1048576 ? (b / 1024).toFixed(1) + " KB" :
-         (b / 1048576).toFixed(2) + " MB";
-};
-var setHint = function (el, msg, err) {
-  el.textContent = msg || "";
-  el.classList.toggle("error", !!err);
-};
-var loadImage = function (file) {
-  return new Promise(function (resolve, reject) {
-    var url = URL.createObjectURL(file);
-    var img = new Image();
-    img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
-    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("load")); };
-    img.src = url;
-  });
-};
-var downloadBlob = function (blob, name) {
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a");
-  a.href = url; a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-};
-var bindDrop = function (dropEl, inputEl, handler) {
-  inputEl.addEventListener("change", function () {
-    var f = inputEl.files && inputEl.files[0];
-    if (f) handler(f);
-  });
-  ["dragenter", "dragover"].forEach(function (t) {
-    dropEl.addEventListener(t, function (e) { e.preventDefault(); dropEl.classList.add("drag"); });
-  });
-  ["dragleave", "dragend"].forEach(function (t) {
-    dropEl.addEventListener(t, function () { dropEl.classList.remove("drag"); });
-  });
-  dropEl.addEventListener("drop", function (e) {
-    e.preventDefault();
-    dropEl.classList.remove("drag");
-    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) handler(f);
-  });
-};
-window.addEventListener("dragover", function (e) { e.preventDefault(); });
-window.addEventListener("drop", function (e) { e.preventDefault(); });
-
-/* Tool 1: Background Remover */
+/* Tool 2: Image Compressor */
 try {
   (function () {
-    var MAX_DIM = 2400;
-    var drop = $("bgDrop"), input = $("bgInput"), hint = $("bgHint");
-    var editor = $("bgEditor"), canvas = $("bgCanvas");
-    var ctx = canvas.getContext("2d", { willReadFrequently: true });
-    var tol = $("bgTol"), tolVal = $("bgTolVal");
-    var soft = $("bgSoft"), softVal = $("bgSoftVal");
-    var compare = $("bgCompare"), dl = $("bgDownload"), reset = $("bgReset");
-    var src = null, proc = null, name = "image";
+    var drop = $("compDrop"), input = $("compInput"), hint = $("compHint");
+    var editor = $("compEditor"), preview = $("compPreview");
+    var q = $("compQ"), qv = $("compQVal"), fmt = $("compFormat");
+    var origEl = $("compOrig"), newEl = $("compNew"), savings = $("compSavings");
+    var dl = $("compDownload"), reset = $("compReset");
+    var file = null, img = null, blob = null;
 
-    function floodMask(data, w, h, tolDist) {
-      var n = w * h;
-      var mask = new Uint8Array(n);
-      var stack = new Int32Array(n);
-      var tol2 = tolDist * tolDist;
-      var sp = 0;
-      for (var x = 0; x < w; x++) {
-        mask[x] = 1; stack[sp++] = x;
-        var b = (h - 1) * w + x;
-        if (!mask[b]) { mask[b] = 1; stack[sp++] = b; }
-      }
-      for (var y = 0; y < h; y++) {
-        var l = y * w;
-        if (!mask[l]) { mask[l] = 1; stack[sp++] = l; }
-        var r = l + w - 1;
-        if (!mask[r]) { mask[r] = 1; stack[sp++] = r; }
-      }
-      while (sp > 0) {
-        var i = stack[--sp];
-        var p = i << 2;
-        var r0 = data[p], g0 = data[p + 1], b0 = data[p + 2];
-        var xx = i % w, yy = (i / w) | 0;
-        var tryN = function (j) {
-          if (mask[j]) return;
-          var q = j << 2;
-          var dr = data[q] - r0, dg = data[q + 1] - g0, db = data[q + 2] - b0;
-          if (dr * dr + dg * dg + db * db <= tol2) { mask[j] = 1; stack[sp++] = j; }
-        };
-        if (xx > 0) tryN(i - 1);
-        if (xx < w - 1) tryN(i + 1);
-        if (yy > 0) tryN(i - w);
-        if (yy < h - 1) tryN(i + w);
-      }
-      return mask;
-    }
-
-    function boxBlur(srcArr, w, h, r) {
-      var div = 2 * r + 1;
-      var tmp = new Float32Array(w * h);
-      var out = new Float32Array(w * h);
-      for (var y = 0; y < h; y++) {
-        var row = y * w;
-        var sum = 0;
-        for (var k = -r; k <= r; k++) sum += srcArr[row + clamp(k, 0, w - 1)];
-        for (var x = 0; x < w; x++) {
-          tmp[row + x] = sum / div;
-          sum += srcArr[row + clamp(x + r + 1, 0, w - 1)] - srcArr[row + clamp(x - r, 0, w - 1)];
+    function update() {
+      if (!img) return;
+      var canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      var quality = Number(q.value) / 100;
+      canvas.toBlob(function (b) {
+        if (!b) return;
+        blob = b;
+        if (preview.src.indexOf("blob:") === 0) URL.revokeObjectURL(preview.src);
+        preview.src = URL.createObjectURL(b);
+        newEl.textContent = formatBytes(b.size);
+        var saved = (1 - b.size / file.size) * 100;
+        if (saved > 0) {
+          savings.textContent = "✓ " + saved.toFixed(1) + "% smaller";
+          savings.style.color = "#15803d";
+        } else {
+          savings.textContent = "no savings at these settings";
+          savings.style.color = "#b45309";
         }
-      }
-      for (var x2 = 0; x2 < w; x2++) {
-        var sum2 = 0;
-        for (var k2 = -r; k2 <= r; k2++) sum2 += tmp[clamp(k2, 0, h - 1) * w + x2];
-        for (var y2 = 0; y2 < h; y2++) {
-          out[y2 * w + x2] = sum2 / div;
-          sum2 += tmp[clamp(y2 + r + 1, 0, h - 1) * w + x2] - tmp[clamp(y2 - r, 0, h - 1) * w + x2];
-        }
-      }
-      return out;
+        dl.disabled = false;
+      }, fmt.value, quality);
     }
 
-    function process() {
-      if (!src) return;
-      var w = src.width, h = src.height;
-      var tolDist = Number(tol.value) * 1.6;
-      var softV = Number(soft.value);
-      var mask = floodMask(src.data, w, h, tolDist);
-      var alpha = new Float32Array(w * h);
-      for (var i = 0; i < alpha.length; i++) alpha[i] = mask[i] ? 0 : 255;
-      if (softV > 0) {
-        alpha = boxBlur(alpha, w, h, softV);
-        for (var j = 0; j < alpha.length; j++) {
-          var t = alpha[j] / 255;
-          alpha[j] = t * t * (3 - 2 * t) * 255;
-        }
-      }
-      var out = new Uint8ClampedArray(src.data);
-      for (var k = 0; k < alpha.length; k++) out[(k << 2) + 3] = alpha[k];
-      proc = new ImageData(out, w, h);
-      render();
-    }
+    bindDrop(drop, input, function (f) {
+      if (!f.type || f.type.indexOf("image/") !== 0) return setHint(hint, "That file is not an image.", true);
+      file = f;
+      loadImage(f).then(function (im) {
+        img = im;
+        drop.hidden = true; editor.hidden = false;
+        origEl.textContent = formatBytes(f.size);
+        setHint(hint, im.naturalWidth + "×" + im.naturalHeight + "px · drag the quality slider");
+        update();
+      }).catch(function () { setHint(hint, "Sorry, could not read that image.", true); });
+    });
 
-    function render() {
-      if (!src) return;
-      var showOrig = compare.checked || !proc;
-      ctx.putImageData(showOrig ? src : proc, 0, 0);
-    }
+    q.addEventListener("input", function () { qv.textContent = q.value; update(); });
+    fmt.addEventListener("change", update);
 
-    function handleFile(file) {
-      if (!file.type || file.type.indexOf("image/") !== 0) return setHint(hint, "That file is not an image.", true);
-      setHint(hint, "Loading…");
-      loadImage(file).then(function (img) {
-        name = (file.name || "image").replace(/\.[^.]+$/, "") || "image";
-        var scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
-        var w = Math.max(1, Math.round(img           canvas.width = img.width * 0.7;
-                    canvas.height = img.height * 0.7;
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    
-                    canvas.toBlob(function(blob) {
-                        const newSize = (blob.size / 1024).toFixed(1) + " KB";
-                        document.getElementById('comp-new-size').innerText = newSize;
-                        
-                        const url = URL.createObjectURL(blob);
-                        const downloadBtn = document.getElementById('comp-download');
-                        downloadBtn.onclick = function() {
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'compressed_' + file.name;
-                            a.click();
-                        };
-                        document.getElementById('comp-result').style.display = 'block';
-                    }, 'image/jpeg', 0.7);
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
+    dl.addEventListener("click", function () {
+      if (!blob) return;
+      var ext = fmt.value === "image/jpeg" ? "jpg" : fmt.value === "image/webp" ? "webp" : "png";
+      downloadBlob(blob, "compressed." + ext);
+    });
 
-        // ==========================================
-        // 3. QR Code Generator (FIXED)
-        // ==========================================
-        const qrInput = document.getElementById('qr-input');
-        const qrCodeDiv = document.getElementById('qr-code');
-        const qrDownloadBtn = document.getElementById('qr-download');
-        let qrInstance = null;
+    reset.addEventListener("click", function () {
+      input.value = "";
+      editor.hidden = true; drop.hidden = false;
+      file = null; img = null; blob = null; dl.disabled = true;
+      if (preview.src.indexOf("blob:") === 0) URL.revokeObjectURL(preview.src);
+      preview.removeAttribute("src");
+      setHint(hint, "");
+      input.click();
+    });
+  })();
+} catch (e) { console.error("Compress tool failed:", e); }
 
-        qrInput.addEventListener('input', function() {
-            const text = this.value.trim();
-            
-            if (text.length > 0) {
-                qrCodeDiv.innerHTML = ''; // Clear previous
-                qrDownloadBtn.style.display = 'block'; // Show download button
-                
-                // Generate new QR Code
-                qrInstance = new QRCode(qrCodeDiv, {
-                    text: text,
-                    width: 200,
-                    height: 200,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
-            } else {
-                qrCodeDiv.innerHTML = '';
-                qrDownloadBtn.style.display = 'none';
-            }
-        });
-
-        qrDownloadBtn.onclick = function() {
-            const canvas = qrCodeDiv.querySelector('canvas');
-            if (!canvas) return alert("QR Code not generated yet.");
-            
-            const url = canvas.toDataURL("image/png");
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'qrcode.png';
-            a.click();
-        };
-
-        // ==========================================
-        // 4. Background Remover
-        // ==========================================
-        const bgZone = document.getElementById('bg-zone');
-        const bgInput = document.getElementById('bg-input');
-        const bgImg = document.getElementById('bg-img');
-
-        bgZone.onclick = () => bgInput.click();
-
-        bgInput.onchange = function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    
-                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const data = imgData.data;
-                    
-                    for (let i = 0; i < data.length; i += 4) {
-                        const r = data[i];
-                        const g = data[i + 1];
-                        const b = data[i + 2];
-                        if (r > 200 && g > 200 && b > 200) {
-                            data[i + 3] = 0;
-                        }
-                    }
-                    ctx.putImageData(imgData, 0, 0);
-                    
-                    bgImg.src = canvas.toDataURL("image/png");
-                    document.getElementById('bg-result').style.display = 'block';
-                    
-                    document.getElementById('bg-download').onclick = function() {
-                        const a = document.createElement('a');
-                        a.href = bgImg.src;
-                        a.download = 'no_bg.png';
-                        a.click();
-                    };
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        };
-
-        // ==========================================
-        // 5. Video Logo Remover (Frontend UI)
-        // ==========================================
-        const videoZone = document.getElementById('video-drop-zone');
-        const videoInput = document.getElementById('video-input');
-        const videoEditor = document.getElementById('video-editor');
-        const previewVideo = document.getElementById('preview-video');
-        const processBtn = document.getElementById('process-video-btn');
-        const resetBtn = document.getElementById('reset-video-btn');
-        const videoStatus = document.getElementById('video-status');
-
-        videoZone.onclick = () => videoInput.click();
-
-        videoInput.onchange = function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const url = URL.createObjectURL(file);
-            previewVideo.src = url;
-            
-            videoZone.style.display = 'none';
-            videoEditor.style.display = 'block';
-            processBtn.disabled = false;
-            videoStatus.innerText = "Video loaded. (Processing requires Python Backend)";
-        };
-
-        resetBtn.onclick = function() {
-            previewVideo.src = '';
-            videoInput.value = '';
-            videoEditor.style.display = 'none';
-            videoZone.style.display = 'block';
-            videoStatus.innerText = '';
-        };
-
-        processBtn.onclick = function() {
-            videoStatus.innerText = "Processing... (Yeh button backend connect hone par kaam karega)";
-        };
-    </script>
-</body>
- </html>d="compQ" min="10" max="100" value="75">
-        </label>
-        <label class="control">Format
-          <select id="compFormat">
-            <option value="image/jpeg">JPEG</option>
-            <option value="image/webp">WebP</option>
-            <option value="image/png">PNG</option>
-          </select>
-        </label>
-      </div>
-      <div class="stat">
-        <div>Original: <b id="compOrig">—</b></div>
-        <div>Compressed: <b id="compNew">—</b></div>
-        <div id="compSavings"></div>
-      </div>
-      <div class="row">
-        <div class="actions">
-          <button class="btn primary" id="compDownload" disabled>Download</button>
-          <button class="btn" id="compReset">Choose another</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  /* ============================================================
-   Tool 3: QR Code Generator — Multi-CDN Fallback (FIXED)
-   ============================================================ */
+/* Tool 3: QR Code Generator — Multi-CDN Fallback */
 try {
   (function () {
     var input = $("qrInput"), sizeSel = $("qrSize"), canvas = $("qrCanvas");
     var gen = $("qrGen"), dl = $("qrDownload"), hint = $("qrHint");
     var libLoaded = false, libLoading = null, qrBlob = null;
 
-    // ایک سے زیادہ CDNs کی لسٹ تاکہ کوئی ایک فیل ہو تو دوسرا کام کرے
     var CDN_URLS = [
       "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js",
       "https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js",
       "https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js",
-      "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.js" // غیر منیفائیڈ fallback
+      "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.js"
     ];
 
     function tryLoadScript(url) {
@@ -985,7 +652,7 @@ try {
         var timer = setTimeout(function () { 
           s.remove(); 
           reject(new Error("timeout")); 
-        }, 8000); // 8 سیکنڈ کا ٹائم آؤٹ
+        }, 8000);
         s.onload = function () { clearTimeout(timer); resolve(); };
         s.onerror = function () { clearTimeout(timer); s.remove(); reject(new Error("failed")); };
         document.head.appendChild(s);
@@ -1002,7 +669,7 @@ try {
             await tryLoadScript(CDN_URLS[i]);
             if (typeof QRCode !== "undefined") {
               libLoaded = true;
-              return; // کامیاب!
+              return;
             }
           } catch (err) {
             console.warn("CDN failed: " + CDN_URLS[i], err);
@@ -1041,459 +708,62 @@ try {
   })();
 } catch (e) { console.error("QR tool failed:", e); }
 
-  <!-- ============================================================ -->
-  <!-- 4) PASSWORD GENERATOR                                        -->
-  <!-- ============================================================ -->
-  <section class="tool" data-tool="password" id="tool-password" hidden>
-    <h2>Password Generator</h2>
-    <p class="lead">Strong random passwords generated with your browser's crypto.</p>
-    <div class="preview-box" style="margin-top:4px">
-      <input type="text" id="pwdOut" class="pwd-out" readonly value="click generate">
-    </div>
-    <div class="controls">
-      <label class="control">Length <b id="pwdLenVal">16</b>
-        <input type="range" id="pwdLen" min="4" max="64" value="16">
-      </label>
-      <div class="control">
-        <div style="margin-bottom:6px">Include</div>
-        <label class="check"><input type="checkbox" id="pwdUpper" checked> Uppercase (A-Z)</label><br>
-        <label class="check"><input type="checkbox" id="pwdLower" checked> Lowercase (a-z)</label><br>
-        <label class="check"><input type="checkbox" id="pwdNum" checked> Numbers (0-9)</label><br>
-        <label class="check"><input type="checkbox" id="pwdSym" checked> Symbols (!@#$)</label>
-      </div>
-    </div>
-    <div class="row">
-      <div class="actions">
-        <button class="btn primary" id="pwdGen">Generate</button>
-        <button class="btn" id="pwdCopy">Copy</button>
-      </div>
-    </div>
-  </section>
+/* Tool 4: Password Generator */
+try {
+  (function () {
+    var out = $("pwdOut"), len = $("pwdLen"), lenVal = $("pwdLenVal");
+    var up = $("pwdUpper"), low = $("pwdLower"), num = $("pwdNum"), sym = $("pwdSym");
+    var gen = $("pwdGen"), copy = $("pwdCopy");
 
-</main>
-
-<footer class="bot">
-  MiniToolBox · all tools run 100% in your browser — nothing is uploaded.
-</footer>
-
-<script>
-(() => {
-  "use strict";
-
-  /* ---------- Shared utilities ---------- */
-  const $ = (id) => document.getElementById(id);
-  const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-  const formatBytes = (b) =>
-    b < 1024 ? b + " B" :
-    b < 1048576 ? (b / 1024).toFixed(1) + " KB" :
-    (b / 1048576).toFixed(2) + " MB";
-
-  function setHint(el, msg, err) {
-    el.textContent = msg || "";
-    el.classList.toggle("error", !!err);
-  }
-
-  function loadImage(file) {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load")); };
-      img.src = url;
-    });
-  }
-
-  function downloadBlob(blob, name) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
-  function bindDrop(dropEl, inputEl, handler) {
-    inputEl.addEventListener("change", () => {
-      const f = inputEl.files && inputEl.files[0];
-      if (f) handler(f);
-    });
-    ["dragenter", "dragover"].forEach((t) =>
-      dropEl.addEventListener(t, (e) => { e.preventDefault(); dropEl.classList.add("drag"); })
-    );
-    ["dragleave", "dragend"].forEach((t) =>
-      dropEl.addEventListener(t, () => dropEl.classList.remove("drag"))
-    );
-    dropEl.addEventListener("drop", (e) => {
-      e.preventDefault();
-      dropEl.classList.remove("drag");
-      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      if (f) handler(f);
-    });
-  }
-
-  // Prevent browser from navigating when a file is dropped elsewhere.
-  window.addEventListener("dragover", (e) => e.preventDefault());
-  window.addEventListener("drop", (e) => e.preventDefault());
-
-  /* ---------- Tab navigation ---------- */
-  const tabBtns = document.querySelectorAll("#tabs button");
-  const tools = document.querySelectorAll(".tool");
-
-  function showTool(name) {
-    let found = false;
-    tools.forEach((t) => {
-      const active = t.dataset.tool === name;
-      t.hidden = !active;
-      if (active) found = true;
-    });
-    if (!found) return showTool("bg");
-    tabBtns.forEach((b) => b.classList.toggle("active", b.dataset.target === name));
-    if (location.hash.slice(1) !== name) {
-      try { history.replaceState(null, "", "#" + name); } catch (_) {}
-    }
-  }
-  tabBtns.forEach((b) => b.addEventListener("click", () => showTool(b.dataset.target)));
-  window.addEventListener("hashchange", () => showTool(location.hash.slice(1) || "bg"));
-  showTool(location.hash.slice(1) || "bg");
-
-  /* ================================================================= */
-  /* 1) BACKGROUND REMOVER                                             */
-  /* ================================================================= */
-  {
-    const MAX_DIM = 2400;
-    const drop = $("bgDrop"), input = $("bgInput"), hint = $("bgHint");
-    const editor = $("bgEditor"), canvas = $("bgCanvas");
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    const tol = $("bgTol"), tolVal = $("bgTolVal");
-    const soft = $("bgSoft"), softVal = $("bgSoftVal");
-    const compare = $("bgCompare"), dl = $("bgDownload"), reset = $("bgReset");
-    let src = null, proc = null, name = "image";
-
-    function floodMask(data, w, h, tolDist) {
-      const n = w * h;
-      const mask = new Uint8Array(n);
-      const stack = new Int32Array(n);
-      const tol2 = tolDist * tolDist;
-      let sp = 0;
-
-      // Seed border pixels
-      for (let x = 0; x < w; x++) {
-        mask[x] = 1; stack[sp++] = x;
-        const b = (h - 1) * w + x;
-        if (!mask[b]) { mask[b] = 1; stack[sp++] = b; }
-      }
-      for (let y = 0; y < h; y++) {
-        const l = y * w;
-        if (!mask[l]) { mask[l] = 1; stack[sp++] = l; }
-        const r = l + w - 1;
-        if (!mask[r]) { mask[r] = 1; stack[sp++] = r; }
-      }
-
-      while (sp > 0) {
-        const i = stack[--sp];
-        const p = i << 2;
-        const r0 = data[p], g0 = data[p + 1], b0 = data[p + 2];
-        const x = i % w, y = (i / w) | 0;
-
-        const tryN = (j) => {
-          if (mask[j]) return;
-          const q = j << 2;
-          const dr = data[q] - r0, dg = data[q + 1] - g0, db = data[q + 2] - b0;
-          if (dr * dr + dg * dg + db * db <= tol2) { mask[j] = 1; stack[sp++] = j; }
-        };
-        if (x > 0) tryN(i - 1);
-        if (x < w - 1) tryN(i + 1);
-        if (y > 0) tryN(i - w);
-        if (y < h - 1) tryN(i + w);
-      }
-      return mask;
-    }
-
-    function boxBlur(srcArr, w, h, r) {
-      const div = 2 * r + 1;
-      const tmp = new Float32Array(w * h);
-      const out = new Float32Array(w * h);
-
-      for (let y = 0; y < h; y++) {
-        const row = y * w;
-        let sum = 0;
-        for (let k = -r; k <= r; k++) sum += srcArr[row + clamp(k, 0, w - 1)];
-        for (let x = 0; x < w; x++) {
-          tmp[row + x] = sum / div;
-          sum += srcArr[row + clamp(x + r + 1, 0, w - 1)] - srcArr[row + clamp(x - r, 0, w - 1)];
-        }
-      }
-      for (let x = 0; x < w; x++) {
-        let sum = 0;
-        for (let k = -r; k <= r; k++) sum += tmp[clamp(k, 0, h - 1) * w + x];
-        for (let y = 0; y < h; y++) {
-          out[y * w + x] = sum / div;
-          sum += tmp[clamp(y + r + 1, 0, h - 1) * w + x] - tmp[clamp(y - r, 0, h - 1) * w + x];
-        }
-      }
-      return out;
-    }
-
-    function process() {
-      if (!src) return;
-      const w = src.width, h = src.height;
-      const tolDist = Number(tol.value) * 1.6;
-      const softV = Number(soft.value);
-
-      const mask = floodMask(src.data, w, h, tolDist);
-      let alpha = new Float32Array(w * h);
-      for (let i = 0; i < alpha.length; i++) alpha[i] = mask[i] ? 0 : 255;
-
-      if (softV > 0) {
-        alpha = boxBlur(alpha, w, h, softV);
-        for (let i = 0; i < alpha.length; i++) {
-          const t = alpha[i] / 255;
-          alpha[i] = t * t * (3 - 2 * t) * 255;
-        }
-      }
-
-      const out = new Uint8ClampedArray(src.data);
-      for (let i = 0; i < alpha.length; i++) out[(i << 2) + 3] = alpha[i];
-      proc = new ImageData(out, w, h);
-      render();
-    }
-
-    function render() {
-      if (!src) return;
-      const showOrig = compare.checked || !proc;
-      ctx.putImageData(showOrig ? src : proc, 0, 0);
-    }
-
-    async function handleFile(file) {
-      if (!file.type.startsWith("image/")) return setHint(hint, "That file is not an image.", true);
-      setHint(hint, "Loading…");
-      let img;
-      try { img = await loadImage(file); }
-      catch { return setHint(hint, "Sorry, could not read that image.", true); }
-
-      name = (file.name || "image").replace(/\.[^.]+$/, "") || "image";
-      const scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
-      const w = Math.max(1, Math.round(img.naturalWidth * scale));
-      const h = Math.max(1, Math.round(img.naturalHeight * scale));
-
-      canvas.width = w; canvas.height = h;
-      ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
-
-      src = ctx.getImageData(0, 0, w, h);
-      proc = null;
-      compare.checked = false;
-      drop.hidden = true; editor.hidden = false; dl.disabled = false;
-
-      setHint(hint, scale < 1
-        ? `Image scaled to ${w}×${h}px for processing.`
-        : `${w}×${h}px · processing happens locally.`);
-      process();
-    }
-
-    bindDrop(drop, input, handleFile);
-
-    let timer;
-    const sched = () => { clearTimeout(timer); timer = setTimeout(process, 60); };
-    tol.addEventListener("input", () => { tolVal.textContent = tol.value; sched(); });
-    soft.addEventListener("input", () => { softVal.textContent = soft.value; sched(); });
-    compare.addEventListener("change", render);
-
-    dl.addEventListener("click", () => {
-      if (!proc) return;
-      const tmp = document.createElement("canvas");
-      tmp.width = proc.width; tmp.height = proc.height;
-      tmp.getContext("2d").putImageData(proc, 0, 0);
-      tmp.toBlob((b) => b && downloadBlob(b, `${name}-no-bg.png`), "image/png");
-    });
-
-    reset.addEventListener("click", () => {
-      input.value = "";
-      editor.hidden = true; drop.hidden = false;
-      src = null; proc = null;
-      setHint(hint, "");
-      input.click();
-    });
-
-    // Paste support (only while BG tab is active)
-    window.addEventListener("paste", (e) => {
-      if ($("tool-bg").hidden) return;
-      const items = e.clipboardData && e.clipboardData.items;
-      if (!items) return;
-      for (const item of items) {
-        if (item.type && item.type.startsWith("image/")) {
-          const f = item.getAsFile();
-          if (f) { e.preventDefault(); handleFile(f); }
-          break;
-        }
-      }
-    });
-  }
-
-  /* ================================================================= */
-  /* 2) IMAGE COMPRESSOR                                               */
-  /* ================================================================= */
-  {
-    const drop = $("compDrop"), input = $("compInput"), hint = $("compHint");
-    const editor = $("compEditor"), preview = $("compPreview");
-    const q = $("compQ"), qv = $("compQVal"), fmt = $("compFormat");
-    const origEl = $("compOrig"), newEl = $("compNew"), savings = $("compSavings");
-    const dl = $("compDownload"), reset = $("compReset");
-    let file = null, img = null, blob = null;
-
-    function update() {
-      if (!img) return;
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      canvas.getContext("2d").drawImage(img, 0, 0);
-      const quality = Number(q.value) / 100;
-
-      canvas.toBlob((b) => {
-        if (!b) return;
-        blob = b;
-        if (preview.src.startsWith("blob:")) URL.revokeObjectURL(preview.src);
-        preview.src = URL.createObjectURL(b);
-        newEl.textContent = formatBytes(b.size);
-
-        const saved = ((1 - b.size / file.size) * 100);
-        if (saved > 0) {
-          savings.textContent = "✓ " + saved.toFixed(1) + "% smaller";
-          savings.style.color = "#15803d";
-        } else {
-          savings.textContent = "no savings at these settings";
-          savings.style.color = "#b45309";
-        }
-        dl.disabled = false;
-      }, fmt.value, quality);
-    }
-
-    bindDrop(drop, input, async (f) => {
-      if (!f.type.startsWith("image/")) return setHint(hint, "That file is not an image.", true);
-      file = f;
-      try { img = await loadImage(f); }
-      catch { return setHint(hint, "Sorry, could not read that image.", true); }
-      drop.hidden = true; editor.hidden = false;
-      origEl.textContent = formatBytes(f.size);
-      setHint(hint, `${img.naturalWidth}×${img.naturalHeight}px · drag the quality slider`);
-      update();
-    });
-
-    q.addEventListener("input", () => { qv.textContent = q.value; update(); });
-    fmt.addEventListener("change", update);
-
-    dl.addEventListener("click", () => {
-      if (!blob) return;
-      const ext = fmt.value === "image/jpeg" ? "jpg" : fmt.value === "image/webp" ? "webp" : "png";
-      downloadBlob(blob, `compressed.${ext}`);
-    });
-
-    reset.addEventListener("click", () => {
-      input.value = "";
-      editor.hidden = true; drop.hidden = false;
-      file = null; img = null; blob = null; dl.disabled = true;
-      if (preview.src.startsWith("blob:")) URL.revokeObjectURL(preview.src);
-      preview.removeAttribute("src");
-      setHint(hint, "");
-      input.click();
-    });
-  }
-
-  /* ================================================================= */
-  /* 3) QR CODE GENERATOR                                              */
-  /* ================================================================= */
-  {
-    const input = $("qrInput"), sizeSel = $("qrSize"), canvas = $("qrCanvas");
-    const gen = $("qrGen"), dl = $("qrDownload"), hint = $("qrHint");
-    let ready = false, qrBlob = null;
-
-    // Dynamically load QR library (needs internet the first time)
-    const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js";
-    s.onload = () => { ready = true; generate(); };
-    s.onerror = () => setHint(hint, "Could not load the QR library — check your internet.", true);
-    document.head.appendChild(s);
-
-    async function generate() {
-      const text = input.value.trim() || "https://example.com";
-      if (!ready || typeof QRCode === "undefined") {
-        setHint(hint, "QR library is still loading…");
-        return;
-      }
-      const size = parseInt(sizeSel.value, 10) || 300;
-      canvas.width = size; canvas.height = size;
-      try {
-        await new Promise((res, rej) =>
-          QRCode.toCanvas(canvas, text, {
-            width: size,
-            margin: 2,
-            color: { dark: "#111827", light: "#ffffff" }
-          }, (err) => err ? rej(err) : res())
-        );
-        canvas.toBlob((b) => {
-          if (!b) return;
-          qrBlob = b;
-          dl.disabled = false;
-        }, "image/png");
-        setHint(hint, "");
-      } catch {
-        setHint(hint, "Could not generate the QR code.", true);
-      }
-    }
-
-    gen.addEventListener("click", generate);
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter") generate(); });
-    sizeSel.addEventListener("change", generate);
-    dl.addEventListener("click", () => { if (qrBlob) downloadBlob(qrBlob, "qrcode.png"); });
-  }
-
-  /* ================================================================= */
-  /* 4) PASSWORD GENERATOR                                             */
-  /* ================================================================= */
-  {
-    const out = $("pwdOut"), len = $("pwdLen"), lenVal = $("pwdLenVal");
-    const up = $("pwdUpper"), low = $("pwdLower"), num = $("pwdNum"), sym = $("pwdSym");
-    const gen = $("pwdGen"), copy = $("pwdCopy");
-
-    const SETS = {
-      up:  "ABCDEFGHJKLMNPQRSTUVWXYZ",   // no I/O
-      low: "abcdefghijkmnopqrstuvwxyz",  // no l
-      num: "23456789",                    // no 0/1
+    var SETS = {
+      up:  "ABCDEFGHJKLMNPQRSTUVWXYZ",
+      low: "abcdefghijkmnopqrstuvwxyz",
+      num: "23456789",
       sym: "!@#$%^&*()-_=+[]{};:,.<>?"
     };
 
     function genPwd() {
-      let chars = "";
+      var chars = "";
       if (up.checked) chars += SETS.up;
       if (low.checked) chars += SETS.low;
       if (num.checked) chars += SETS.num;
       if (sym.checked) chars += SETS.sym;
       if (!chars) chars = SETS.low;
-
-      const n = Number(len.value);
-      const arr = new Uint32Array(n);
+      var n = Number(len.value);
+      var arr = new Uint32Array(n);
       crypto.getRandomValues(arr);
-      let s = "";
-      for (let i = 0; i < n; i++) s += chars[arr[i] % chars.length];
+      var s = "";
+      for (var i = 0; i < n; i++) s += chars[arr[i] % chars.length];
       out.value = s;
     }
 
-    len.addEventListener("input", () => { lenVal.textContent = len.value; });
+    len.addEventListener("input", function () { lenVal.textContent = len.value; });
     gen.addEventListener("click", genPwd);
-    copy.addEventListener("click", () => {
+    copy.addEventListener("click", function () {
       if (!out.value || out.value === "click generate") return;
-      navigator.clipboard.writeText(out.value).then(() => {
-        const t = copy.textContent;
+      navigator.clipboard.writeText(out.value).then(function () {
+        var t = copy.textContent;
         copy.textContent = "Copied!";
-        setTimeout(() => (copy.textContent = t), 1100);
+        setTimeout(function () { copy.textContent = t; }, 1100);
+      }).catch(function () { alert("Copy failed — please select and copy manually."); });
+    });
+    [up, low, num, sym].forEach(function (c) {
+      c.addEventListener("change", function () {
+        if (out.value !== "click generate") genPwd();
       });
     });
-    [up, low, num, sym].forEach((c) => c.addEventListener("change", () => {
-      if (out.value !== "click generate") genPwd();
-    }));
 
-    genPwd(); // show a password immediately
-  }
+    genPwd();
+  })();
+} catch (e) { console.error("Password tool failed:", e); }
 
+/* Ready indicator */
+(function () {
+  try {
+    var el = $("jsStatus");
+    el.textContent = "✓ Ready — click any tab above to switch tools";
+    el.classList.add("ok");
+  } catch (e) { /* ignore */ }
 })();
 </script>
 
