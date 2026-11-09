@@ -85,18 +85,40 @@ try {
     var qrBlob = null;
 
     function generateQR() {
-      var text = input.value.trim();
-      var size = parseInt(sizeSel.value, 10);
+  var text = input.value.trim();
+  var size = parseInt(sizeSel.value, 10);
 
-      if (!text) {
-        setHint(hint, "Please enter text or a URL.", true);
-        return;
-      }
+  if (!text) {
+    setHint(hint, "Please enter text or a URL.", true);
+    return;
+  }
 
-      if (typeof QRCode === 'undefined') {
-        setHint(hint, "Failed to load QR library. Please check your internet or refresh the page.", true);
-        return;
-      }
+  // یہ چیک کریں کہ QRCode لائبریری لوڈ ہو چکی ہے
+  if (typeof QRCode === 'undefined') {
+    setHint(hint, "Failed to load QR library. Please check your internet or refresh the page.", true);
+    return;
+  }
+
+  // کینوس کا سائز سیٹ کریں
+  canvas.width = size;
+  canvas.height = size;
+
+  // QR کوڈ جنریٹ کریں اور کال بیک میں نتیجہ سنبھالیں
+  QRCode.toCanvas(canvas, text, { width: size, margin: 2 }, function (error) {
+    if (error) {
+      console.error(error);
+      setHint(hint, "Error generating QR code. Please try again.", true);
+    } else {
+      setHint(hint, "QR Code generated successfully.");
+      dl.disabled = false;
+      
+      // ڈاؤن لوڈ کے لیے بلیب (Blob) بنائیں
+      canvas.toBlob(function (b) {
+        qrBlob = b;
+      }, "image/png");
+    }
+  });
+}
 
       canvas.width = size;
       canvas.height = size;
