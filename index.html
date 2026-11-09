@@ -85,51 +85,49 @@ try{(function(){var MAX_DIM=2400;var drop=$("bgDrop"),input=$("bgInput"),hint=$(
 
 try{(function(){var drop=$("compDrop"),input=$("compInput"),hint=$("compHint");var editor=$("compEditor"),preview=$("compPreview");var q=$("compQ"),qv=$("compQVal"),fmt=$("compFormat");var origEl=$("compOrig"),newEl=$("compNew"),savings=$("compSavings");var dl=$("compDownload"),reset=$("compReset");var file=null,img=null,blob=null;function update(){if(!img)return;var canvas=document.createElement("canvas");canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext("2d").drawImage(img,0,0);var quality=Number(q.value)/100;canvas.toBlob(function(b){if(!b)return;blob=b;if(preview.src.indexOf("blob:")===0)URL.revokeObjectURL(preview.src);preview.src=URL.createObjectURL(b);newEl.textContent=formatBytes(b.size);var saved=(1-b.size/file.size)*100;if(saved>0){savings.textContent="✓ "+saved.toFixed(1)+"% smaller";savings.style.color="#15803d"}else{savings.textContent="no savings at these settings";savings.style.color="#b45309"}dl.disabled=false},fmt.value,quality)}bindDrop(drop,input,function(f){if(!f.type||f.type.indexOf("image/")!==0)return setHint(hint,"That file is not an image.",true);file=f;loadImage(f).then(function(im){img=im;drop.hidden=true;editor.hidden=false;origEl.textContent=formatBytes(f.size);setHint(hint,im.naturalWidth+"×"+im.naturalHeight+"px · drag the quality slider");update()}).catch(function(){setHint(hint,"Sorry, could not read that image.",true)})});q.addEventListener("input",function(){qv.textContent=q.value;update()});fmt.addEventListener("change",update);dl.addEventListener("click",function(){if(!blob)return;var ext=fmt.value==="image/jpeg"?"jpg":fmt.value==="image/webp"?"webp":"png";downloadBlob(blob,"compressed."+ext)});reset.addEventListener("click",function(){input.value="";editor.hidden=true;drop.hidden=false;file=null;img=null;blob=null;dl.disabled=true;if(preview.src.indexOf("blob:")===0)URL.revokeObjectURL(preview.src);preview.removeAttribute("src");setHint(hint,"");input.click()})})()}catch(e){console.error("Compress tool failed:",e)}
 
-try {
-  (function () {
-    var input = $("qrInput"), sizeSel = $("qrSize"), canvas = $("qrCanvas");
-    var gen = $("qrGen"), dl = $("qrDownload"), hint = $("qrHint");
-    var qrBlob = null;
-    function generateQR() {
-      var text = input.value.trim();
-      var size = parseInt(sizeSel.value, 10);
-      if (!text) {
-        setHint(hint, "Please enter text or a URL.", true);
-        return;
-      }
-      if (typeof QRCode === 'undefined') {
-        setHint(hint, "Failed to load QR library. Please check your internet or refresh the page.", true);
-        return;
-      }
-      canvas.width = size;
-      canvas.height = size;
-      QRCode.toCanvas(canvas, text, { width: size, margin: 2 }, function (error) {
-        if (error) {
-          setHint(hint, "Error generating QR code.", true);
-          console.error(error);
-        } else {
-          setHint(hint, "QR Code generated successfully.");
-          dl.disabled = false;
-          canvas.toBlob(function (b) {
-            qrBlob = b;
-          }, "image/png");
-        }
-      });
-    }
-    gen.addEventListener("click", generateQR);
-    input.addEventListener("keypress", function(e) {
-      if (e.key === "Enter") generateQR();
-    });
-    dl.addEventListener("click", function () {
-      if (qrBlob) {
-        downloadBlob(qrBlob, "qrcode.png");
-      }
-    });
-  })();
-} catch (e) {
-  console.error("QR tool failed:", e);
-}
 
+(function () {
+  var input = $("qrInput"), sizeSel = $("qrSize");
+  var box = $("qrCanvas"), gen = $("qrGen"), dl = $("qrDownload"), hint = $("qrHint");
+
+  gen.addEventListener("click", function () {
+    var text = input.value.trim();
+    var size = parseInt(sizeSel.value, 10);
+
+    if (!text) {
+      setHint(hint, "Please enter text or a URL.", true);
+      return;
+    }
+    if (typeof QRCode === "undefined") {
+      setHint(hint, "qrcode.js فائل نہیں ملی۔ فائل کا نام اور جگہ چیک کریں۔", true);
+      return;
+    }
+
+    box.innerHTML = "";
+    new QRCode(box, {
+      text: text,
+      width: size,
+      height: size,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    setHint(hint, "QR code تیار ہے۔");
+    dl.disabled = false;
+  });
+
+  dl.addEventListener("click", function () {
+    var canvas = box.querySelector("canvas");
+    if (!canvas) {
+      setHint(hint, "پہلے Generate کریں۔", true);
+      return;
+    }
+    canvas.toBlob(function (b) {
+      if (b) downloadBlob(b, "qr-code.png");
+    }, "image/png");
+  });
+})();
 try{(function(){var out=$("pwdOut"),len=$("pwdLen"),lenVal=$("pwdLenVal");var up=$("pwdUpper"),low=$("pwdLower"),num=$("pwdNum"),sym=$("pwdSym");var gen=$("pwdGen"),copy=$("pwdCopy");var SETS={up:"ABCDEFGHJKLMNPQRSTUVWXYZ",low:"abcdefghijkmnopqrstuvwxyz",num:"23456789",sym:"!@#$%^&*()-_=+[]{};:,.<>?"};function genPwd(){var chars="";if(up.checked)chars+=SETS.up;if(low.checked)chars+=SETS.low;if(num.checked)chars+=SETS.num;if(sym.checked)chars+=SETS.sym;if(!chars)chars=SETS.low;var n=Number(len.value);var arr=new Uint32Array(n);crypto.getRandomValues(arr);var s="";for(var i=0;i<n;i++)s+=chars[arr[i]%chars.length];out.value=s}len.addEventListener("input",function(){lenVal.textContent=len.value});gen.addEventListener("click",genPwd);copy.addEventListener("click",function(){if(!out.value||out.value==="click generate")return;navigator.clipboard.writeText(out.value).then(function(){var t=copy.textContent;copy.textContent="Copied!";setTimeout(function(){copy.textContent=t},1100)}).catch(function(){alert("Copy failed — please select and copy manually.")})});[up,low,num,sym].forEach(function(c){c.addEventListener("change",function(){if(out.value!=="click generate")genPwd()})});genPwd()})()}catch(e){console.error("Password tool failed:",e)}
 (function(){try{var el=$("jsStatus");el.textContent="✓ Ready — click any tab above to switch tools";el.classList.add("ok")}catch(e){}})();
 </script>
