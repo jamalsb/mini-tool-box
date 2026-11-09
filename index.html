@@ -66,7 +66,63 @@
 <div class="row"><div class="actions"><button type="button" class="btn primary" id="pwdGen">Generate</button><button type="button" class="btn" id="pwdCopy">Copy</button></div></div>
 </section>
 </main>
-<footer class="bot">MiniToolBox · all tools run 100% in your browser.</footer>
+<footer class="bot">MiniToolBox · all tools run 100% in your browser.</footer>try {
+  (function () {
+    var input = $("qrInput"), sizeSel = $("qrSize"), canvas = $("qrCanvas");
+    var gen = $("qrGen"), dl = $("qrDownload"), hint = $("qrHint");
+    var qrBlob = null;
+
+    function generateQR() {
+      var text = input.value.trim();
+      var size = parseInt(sizeSel.value, 10);
+
+      if (!text) {
+        setHint(hint, "Please enter text or a URL.", true);
+        return;
+      }
+
+      if (typeof QRCode === 'undefined') {
+        // یہاں اردو ختم کر کے انگریزی کر دی گئی ہے
+        setHint(hint, "Failed to load QR library. Please check your internet or refresh the page.", true);
+        return;
+      }
+
+      canvas.width = size;
+      canvas.height = size;
+
+      // لائبریری کا استعمال کرتے ہوئے QR کوڈ بنانا
+      QRCode.toCanvas(canvas, text, { width: size, margin: 1 }, function (error) {
+        if (error) {
+          setHint(hint, "Error generating QR code.", true);
+          console.error(error);
+        } else {
+          setHint(hint, "QR Code generated successfully.");
+          dl.disabled = false;
+          canvas.toBlob(function (b) {
+            qrBlob = b;
+          }, "image/png");
+        }
+      });
+    }
+
+    // جنریٹ بٹن پر کلک کرنے پر
+    gen.addEventListener("click", generateQR);
+    
+    // انٹر دبانے پر بھی جنریٹ ہو
+    input.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") generateQR();
+    });
+
+    // ڈاؤن لوڈ بٹن
+    dl.addEventListener("click", function () {
+      if (qrBlob) {
+        downloadBlob(qrBlob, "qrcode.png");
+      }
+    });
+  })();
+} catch (e) {
+  console.error("QR tool failed:", e);
+}
 <script>
 window.showTool=function(name){try{var sections=document.querySelectorAll(".tool");for(var i=0;i<sections.length;i++){var s=sections[i];if(s.getAttribute("data-tool")===name){s.classList.add("active")}else{s.classList.remove("active")}}var btns=document.querySelectorAll("#tabs button");for(var j=0;j<btns.length;j++){var b=btns[j];var onclickAttr=b.getAttribute("onclick")||"";if(onclickAttr.indexOf("'"+name+"'")!==-1){b.classList.add("active")}else{b.classList.remove("active")}}try{history.replaceState(null,"","#"+name)}catch(e){}window.scrollTo({top:0,behavior:"smooth"})}catch(err){console.error("showTool error:",err)}};(function(){var hash=(location.hash||"").replace("#","");var valid=["bg","compress","qr","password"];if(valid.indexOf(hash)!==-1)window.showTool(hash);window.addEventListener("hashchange",function(){var h=(location.hash||"").replace("#","");if(valid.indexOf(h)!==-1)window.showTool(h)})})();var $=function(id){return document.getElementById(id)};var clamp=function(v,lo,hi){return v<lo?lo:v>hi?hi:v};var formatBytes=function(b){return b<1024?b+" B":b<1048576?(b/1024).toFixed(1)+" KB":(b/1048576).toFixed(2)+" MB"};var setHint=function(el,msg,err){el.textContent=msg||"";el.classList.toggle("error",!!err)};var loadImage=function(file){return new Promise(function(resolve,reject){var url=URL.createObjectURL(file);var img=new Image();img.onload=function(){URL.revokeObjectURL(url);resolve(img)};img.onerror=function(){URL.revokeObjectURL(url);reject(new Error("load"))};img.src=url})};var downloadBlob=function(blob,name){var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000)};var bindDrop=function(dropEl,inputEl,handler){inputEl.addEventListener("change",function(){var f=inputEl.files&&inputEl.files[0];if(f)handler(f)});["dragenter","dragover"].forEach(function(t){dropEl.addEventListener(t,function(e){e.preventDefault();dropEl.classList.add("drag")})});["dragleave","dragend"].forEach(function(t){dropEl.addEventListener(t,function(){dropEl.classList.remove("drag")})});dropEl.addEventListener("drop",function(e){e.preventDefault();dropEl.classList.remove("drag");var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handler(f)})};window.addEventListener("dragover",function(e){e.preventDefault()});window.addEventListener("drop",function(e){e.preventDefault()});
 try{(function(){var MAX_DIM=2400;var drop=$("bgDrop"),input=$("bgInput"),hint=$("bgHint");var editor=$("bgEditor"),canvas=$("bgCanvas");var ctx=canvas.getContext("2d",{willReadFrequently:true});var tol=$("bgTol"),tolVal=$("bgTolVal");var soft=$("bgSoft"),softVal=$("bgSoftVal");var compare=$("bgCompare"),dl=$("bgDownload"),reset=$("bgReset");var src=null,proc=null,name="image";function floodMask(data,w,h,tolDist){var n=w*h;var mask=new Uint8Array(n);var stack=new Int32Array(n);var tol2=tolDist*tolDist;var sp=0;for(var x=0;x<w;x++){mask[x]=1;stack[sp++]=x;var b=(h-1)*w+x;if(!mask[b]){mask[b]=1;stack[sp++]=b}}for(var y=0;y<h;y++){var l=y*w;if(!mask[l]){mask[l]=1;stack[sp++]=l}var r=l+w-1;if(!mask[r]){mask[r]=1;stack[sp++]=r}}while(sp>0){var i=stack[--sp];var p=i<<2;var r0=data[p],g0=data[p+1],b0=data[p+2];var xx=i%w,yy=(i/w)|0;var tryN=function(j){if(mask[j])return;var q=j<<2;var dr=data[q]-r0,dg=data[q+1]-g0,db=data[q+2]-b0;if(dr*dr+dg*dg+db*db<=tol2){mask[j]=1;stack[sp++]=j}};if(xx>0)tryN(i-1);if(xx<w-1)tryN(i+1);if(yy>0)tryN(i-w);if(yy<h-1)tryN(i+w)}return mask}function boxBlur(srcArr,w,h,r){var div=2*r+1;var tmp=new Float32Array(w*h);var out=new Float32Array(w*h);for(var y=0;y<h;y++){var row=y*w;var sum=0;for(var k=-r;k<=r;k++)sum+=srcArr[row+clamp(k,0,w-1)];for(var x=0;x<w;x++){tmp[row+x]=sum/div;sum+=srcArr[row+clamp(x+r+1,0,w-1)]-srcArr[row+clamp(x-r,0,w-1)]}}for(var x2=0;x2<w;x2++){var sum2=0;for(var k2=-r;k2<=r;k2++)sum2+=tmp[clamp(k2,0,h-1)*w+x2];for(var y2=0;y2<h;y2++){out[y2*w+x2]=sum2/div;sum2+=tmp[clamp(y2+r+1,0,h-1)*w+x2]-tmp[clamp(y2-r,0,h-1)*w+x2]}}return out}function process(){if(!src)return;var w=src.width,h=src.height;var tolDist=Number(tol.value)*1.6;var softV=Number(soft.value);var mask=floodMask(src.data,w,h,tolDist);var alpha=new Float32Array(w*h);for(var i=0;i<alpha.length;i++)alpha[i]=mask[i]?0:255;if(softV>0){alpha=boxBlur(alpha,w,h,softV);for(var j=0;j<alpha.length;j++){var t=alpha[j]/255;alpha[j]=t*t*(3-2*t)*255}}var out=new Uint8ClampedArray(src.data);for(var k=0;k<alpha.length;k++)out[(k<<2)+3]=alpha[k];proc=new ImageData(out,w,h);render()}function render(){if(!src)return;var showOrig=compare.checked||!proc;ctx.putImageData(showOrig?src:proc,0,0)}function handleFile(file){if(!file.type||file.type.indexOf("image/")!==0)return setHint(hint,"That file is not an image.",true);setHint(hint,"Loading…");loadImage(file).then(function(img){name=(file.name||"image").replace(/\.[^.]+$/,"")||"image";var scale=Math.min(1,MAX_DIM/Math.max(img.naturalWidth,img.naturalHeight));var w=Math.max(1,Math.round(img.naturalWidth*scale));var h=Math.max(1,Math.round(img.naturalHeight*scale));canvas.width=w;canvas.height=h;ctx.clearRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);src=ctx.getImageData(0,0,w,h);proc=null;compare.checked=false;drop.hidden=true;editor.hidden=false;dl.disabled=false;setHint(hint,scale<1?"Image scaled to "+w+"×"+h+"px.":w+"×"+h+"px · local.");process()}).catch(function(){setHint(hint,"Sorry, could not read that image.",true)})}bindDrop(drop,input,handleFile);var timer;var sched=function(){clearTimeout(timer);timer=setTimeout(process,60)};tol.addEventListener("input",function(){tolVal.textContent=tol.value;sched()});soft.addEventListener("input",function(){softVal.textContent=soft.value;sched()});compare.addEventListener("change",render);dl.addEventListener("click",function(){if(!proc)return;var tmp=document.createElement("canvas");tmp.width=proc.width;tmp.height=proc.height;tmp.getContext("2d").putImageData(proc,0,0);tmp.toBlob(function(b){if(b)downloadBlob(b,name+"-no-bg.png")},"image/png")});reset.addEventListener("click",function(){input.value="";editor.hidden=true;drop.hidden=false;src=null;proc=null;setHint(hint,"");input.click()});window.addEventListener("paste",function(e){if($("tool-bg").getBoundingClientRect().height===0)return;var items=e.clipboardData&&e.clipboardData.items;if(!items)return;for(var i=0;i<items.length;i++){if(items[i].type&&items[i].type.indexOf("image/")===0){var f=items[i].getAsFile();if(f){e.preventDefault();handleFile(f)}break}}})})()}catch(e){console.error("BG tool failed:",e)}
